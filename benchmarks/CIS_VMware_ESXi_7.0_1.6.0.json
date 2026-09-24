@@ -1,0 +1,2704 @@
+{
+  "schema_version": "1.0",
+  "generated_by": "build_benchmark_definition.py",
+  "benchmark": {
+    "id": "vmware-esxi-7.0",
+    "framework": "CIS",
+    "name": "CIS VMware ESXi 7.0 Benchmark",
+    "short_name": "VMware ESXi 7.0",
+    "version": "1.6.0",
+    "published": "2026-08-27",
+    "source_document": "CIS VMWare ESXi 7 Benchmark V1.6.0 PDF.pdf",
+    "platform": {
+      "os_id": "esxi",
+      "version_ids": [
+        "7"
+      ],
+      "architectures": [
+        "x86_64"
+      ]
+    },
+    "profiles": [
+      "Level 1 (L1) - Corporate/Enterprise Environment (general use)",
+      "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+    ],
+    "automated_control_count": 61,
+    "manual_control_count": 29
+  },
+  "controls": [
+    {
+      "id": "ESX7-INST-002",
+      "cis_id": "1.2",
+      "title": "Ensure the Image Profile VIB acceptance level is configured properly",
+      "section": "Install",
+      "category": "Host Software",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "High",
+      "description": "Checks that the host image profile acceptance level, and the acceptance level of every installed VIB, is PartnerSupported, VMwareAccepted or VMwareCertified.",
+      "rationale": "The acceptance level decides which software bundles the host will install. CommunitySupported bundles are not tested or signed by VMware or a partner, yet run with full privileges in the hypervisor.",
+      "business_impact": "Unsigned or community VIBs can place kernel-level malware or unstable drivers in the hypervisor, compromising every virtual machine on the host; malicious VIBs have been used by attackers as a persistence mechanism.",
+      "recommendation": "Keep the host acceptance level at PartnerSupported or higher and remove installed VIBs below that level.",
+      "remediation": "Review the VIBs reported below PartnerSupported ('esxcli software vib list'), remove those without a supported replacement with 'esxcli software vib remove -n <name>', then run 'esxcli software acceptance set --level=PartnerSupported'.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.2"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_acceptance"
+      }
+    },
+    {
+      "id": "ESX7-INST-004",
+      "cis_id": "1.4",
+      "title": "Ensure the default value of individual salt per vm is configured",
+      "section": "Install",
+      "category": "Host Software",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that Mem.ShareForceSalting is 2, so transparent page sharing only shares memory between virtual machines that have the same salt value (by default, only within one virtual machine).",
+      "rationale": "Research has shown that memory pages shared between virtual machines can be used as a timing side channel to infer another virtual machine's memory contents.",
+      "business_impact": "A malicious or compromised virtual machine could use page-sharing side channels to recover secrets, such as cryptographic keys, from other virtual machines on the host.",
+      "recommendation": "Set Mem.ShareForceSalting to 2.",
+      "remediation": "Run 'esxcli system settings advanced set -o /Mem/ShareForceSalting -i 2' in the ESXi Shell, or change Mem.ShareForceSalting under Configure > System > Advanced System Settings in the vSphere Client. Virtual machines pick up the change when they are powered on or migrated.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Mem.ShareForceSalting",
+            "rule": {
+              "op": "equals",
+              "value": "2"
+            },
+            "expected": "2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX7-COMM-001",
+      "cis_id": "2.1",
+      "title": "Ensure NTP time synchronization is configured properly",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that NTP servers are configured, the NTP service is running and its startup policy is 'Start and stop with host'. When approved_time_servers is set in config.json, every configured server must be on that list.",
+      "rationale": "Accurate and consistent time is needed to correlate logs across systems, validate certificates and authenticate against Active Directory.",
+      "business_impact": "Clock drift makes host logs unreliable for incident timelines and can break directory authentication and certificate validation.",
+      "recommendation": "Configure at least two authoritative NTP sources and set the NTP service to start and stop with the host.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Time Configuration, edit Network Time Protocol, add the servers and set the startup policy to 'Start and stop with host'. From the ESXi Shell (7.0 Update 1 and later): 'esxcli system ntp set --server=<ntp1> --server=<ntp2> --enabled=true'.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.4"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_ntp"
+      }
+    },
+    {
+      "id": "ESX7-COMM-003",
+      "cis_id": "2.3",
+      "title": "Ensure Managed Object Browser (MOB) is disabled",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that Config.HostAgent.plugins.solo.enableMob is false, so the Managed Object Browser web interface is disabled (falling back to the reverse proxy endpoint list when the option cannot be read).",
+      "rationale": "The Managed Object Browser exposes the host's object model over HTTPS and lets authenticated users view and change configuration outside the normal management tools. It exists for debugging.",
+      "business_impact": "An attacker holding host credentials can use the MOB from a web browser to explore and change host configuration, and the extra endpoint enlarges the host's attack surface.",
+      "recommendation": "Disable the Managed Object Browser and enable it only temporarily for troubleshooting.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Advanced System Settings and set Config.HostAgent.plugins.solo.enableMob to false. The benchmark notes that this must be changed from the vSphere interface and cannot be changed while the host is in lockdown mode.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_mob_disabled"
+      }
+    },
+    {
+      "id": "ESX7-LOG-001",
+      "cis_id": "3.1",
+      "title": "Ensure a centralized location is configured to collect ESXi host core dumps",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that a network dump collector is configured and enabled, so kernel core dumps are sent off the host.",
+      "rationale": "Core dumps are needed to diagnose host failures; a central collector keeps them available when local storage is small or unavailable.",
+      "business_impact": "Without a central dump location the cause of a host crash may be lost, and dumps containing virtual machine memory stay on local storage.",
+      "recommendation": "Configure ESXi Dump Collector, or another network dump target, and enable it.",
+      "remediation": "Run 'esxcli system coredump network set -v vmk0 -i <collector IP> -o 6500', then 'esxcli system coredump network set -e true', and confirm with 'esxcli system coredump network check'.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.9"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_coredump_network"
+      }
+    },
+    {
+      "id": "ESX7-LOG-003",
+      "cis_id": "3.3",
+      "title": "Ensure remote logging is configured for ESXi hosts",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that Syslog.global.logHost names at least one remote syslog collector.",
+      "rationale": "Logs held only on the host are lost when it fails and can be altered or deleted by an attacker who compromises it.",
+      "business_impact": "Without remote logging, investigations of host compromise, ransomware deployment or configuration tampering lack trustworthy evidence.",
+      "recommendation": "Send host logs to a central syslog collector or SIEM, preferably over TLS.",
+      "remediation": "Run 'esxcli system syslog config set --loghost=ssl://<collector>:1514', 'esxcli system syslog reload' and 'esxcli network firewall ruleset set -r syslog -e true', or set Syslog.global.logHost under Advanced System Settings.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2",
+        "8.5",
+        "8.9"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Syslog.global.logHost",
+            "rule": {
+              "op": "present"
+            },
+            "expected": "at least one remote syslog collector"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX7-ACC-001",
+      "cis_id": "4.1",
+      "title": "Ensure a non-root user account exists for local admin access",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that at least one named account other than root, dcui and vpxuser holds the Administrator role on the host.",
+      "rationale": "Named administrator accounts make host actions attributable to individuals and let the shared root password be kept in a vault for emergencies.",
+      "business_impact": "When every administrator uses root, host logs cannot show who made a change and the root password has to be shared widely.",
+      "recommendation": "Create a named administrator account for each host administrator (or use directory accounts) and reserve root for break-glass use.",
+      "remediation": "In the VMware Host Client open Manage > Security & users > Users > Add user, then grant the account the Administrator role through Host > Actions > Permissions. Enable shell access for the account only if shell administration is required.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.4"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_nonroot_admin"
+      }
+    },
+    {
+      "id": "ESX7-ACC-003",
+      "cis_id": "4.3",
+      "title": "Ensure the maximum failed login attempts is set to 5",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that Security.AccountLockFailures is between 1 and 5, so a local account is locked after at most five consecutive failed logins (0 disables lockout).",
+      "rationale": "Account lockout limits online password guessing against local accounts through SSH, the Host Client and the API.",
+      "business_impact": "Without lockout an attacker can guess local passwords, including root's, at an unlimited rate.",
+      "recommendation": "Set Security.AccountLockFailures to 5 or fewer attempts.",
+      "remediation": "Run 'esxcli system settings advanced set -o /Security/AccountLockFailures -i 5' in the ESXi Shell, or change Security.AccountLockFailures under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "6.2"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Security.AccountLockFailures",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 5
+            },
+            "expected": "1 to 5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX7-ACC-004",
+      "cis_id": "4.4",
+      "title": "Ensure account lockout is set to 15 minutes",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that Security.AccountUnlockTime is at least 900 seconds, so a locked account stays locked for 15 minutes or longer.",
+      "rationale": "A short unlock time lets password guessing continue at a high rate despite lockout.",
+      "business_impact": "Brute-force attempts can resume shortly after each lockout, eroding the protection lockout provides.",
+      "recommendation": "Set Security.AccountUnlockTime to 900 seconds.",
+      "remediation": "Run 'esxcli system settings advanced set -o /Security/AccountUnlockTime -i 900' in the ESXi Shell, or change Security.AccountUnlockTime under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Security.AccountUnlockTime",
+            "rule": {
+              "op": "min",
+              "value": 900
+            },
+            "expected": "900 seconds or more"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX7-CONS-001",
+      "cis_id": "5.1",
+      "title": "Ensure the DCUI timeout is set to 600 seconds or less",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that UserVars.DcuiTimeOut is between 1 and 600 seconds, so idle Direct Console User Interface sessions are logged out automatically (0 disables the timeout).",
+      "rationale": "A console session left logged in can be used by anyone with access to the physical console or the remote management controller.",
+      "business_impact": "An abandoned DCUI session lets someone at the console change management networking, restart agents or enable the shell without authenticating.",
+      "recommendation": "Set UserVars.DcuiTimeOut to 600 seconds or less.",
+      "remediation": "Run 'esxcli system settings advanced set -o /UserVars/DcuiTimeOut -i 600' in the ESXi Shell, or change UserVars.DcuiTimeOut under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "UserVars.DcuiTimeOut",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 600
+            },
+            "expected": "1 to 600 seconds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX7-CONS-002",
+      "cis_id": "5.2",
+      "title": "Ensure the ESXi shell is disabled",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that the ESXi Shell service startup policy is 'Start and stop manually', so the local shell is only available while an administrator has started it.",
+      "rationale": "The ESXi Shell gives unrestricted root access from the server console or its remote management controller, outside vCenter Server permissions.",
+      "business_impact": "Anyone reaching the console or the hardware management controller (for example through a weak iLO/iDRAC password) could use a running ESXi Shell to take full control of the host.",
+      "recommendation": "Keep the ESXi Shell stopped with a manual startup policy and start it only for troubleshooting.",
+      "remediation": "In the vSphere Client (or the VMware Host Client) select the host > Configure > System > Services > ESXi Shell > Edit Startup Policy > 'Start and stop manually', and stop the service when it is not in use.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_service_disabled",
+        "service": "TSM",
+        "label": "ESXi Shell",
+        "audit_channel": true
+      }
+    },
+    {
+      "id": "ESX7-CONS-003",
+      "cis_id": "5.3",
+      "title": "Ensure SSH is disabled",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "High",
+      "description": "Checks that the SSH service startup policy is 'Start and stop manually', so SSH is only available while an administrator has started it for a specific task.",
+      "rationale": "Standing SSH access to the hypervisor bypasses vCenter Server role-based access control and gives a direct root shell on the host.",
+      "business_impact": "An attacker with stolen or guessed credentials gets an interactive root shell on the hypervisor and can encrypt or delete every virtual machine; enabling SSH is a common step in ESXi ransomware attacks.",
+      "recommendation": "Keep SSH stopped with a manual startup policy and start it only for time-limited maintenance, together with the ESXi Shell timeouts.",
+      "remediation": "In the vSphere Client (or the VMware Host Client) select the host > Configure > System > Services > SSH > Edit Startup Policy > 'Start and stop manually', and stop the service once this assessment has finished.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_service_disabled",
+        "service": "TSM-SSH",
+        "label": "SSH",
+        "audit_channel": true
+      }
+    },
+    {
+      "id": "ESX7-CONS-005",
+      "cis_id": "5.5",
+      "title": "Ensure Normal Lockdown mode is enabled",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that lockdown mode is enabled (normal or strict), so the host is managed through vCenter Server, the DCUI and the Exception Users only.",
+      "rationale": "Lockdown mode forces administration through vCenter Server, where role-based access control, auditing and alarms apply, and blocks direct logins with local credentials.",
+      "business_impact": "Without lockdown mode anyone holding local credentials can manage the host directly, bypassing vCenter Server permissions and auditing.",
+      "recommendation": "Enable normal lockdown mode on hosts managed by vCenter Server and keep the Exception Users list to service accounts that require direct access.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Security Profile > Lockdown Mode > Edit and choose Normal. Lockdown mode needs vCenter Server; for a standalone host, record a documented exception instead.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.6"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_lockdown",
+        "allowed": [
+          "lockdownNormal",
+          "lockdownStrict"
+        ]
+      }
+    },
+    {
+      "id": "ESX7-CONS-006",
+      "cis_id": "5.6",
+      "title": "Ensure Strict Lockdown mode is enabled",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that the host is in strict lockdown mode, which also stops the Direct Console User Interface service.",
+      "rationale": "Strict lockdown removes the DCUI as a management path, so the host is managed only through vCenter Server and by Exception Users.",
+      "business_impact": "In normal lockdown mode anyone at the physical or remote console with DCUI access can still change the host's configuration.",
+      "recommendation": "Enable strict lockdown mode where losing DCUI access is acceptable and a tested recovery procedure exists.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Security Profile > Lockdown Mode > Edit and choose Strict. Confirm vCenter Server connectivity and the Exception Users list first: a host that loses vCenter Server while in strict lockdown can become unmanageable until it is reinstalled.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.6"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_lockdown",
+        "allowed": [
+          "lockdownStrict"
+        ]
+      }
+    },
+    {
+      "id": "ESX7-CONS-008",
+      "cis_id": "5.8",
+      "title": "Ensure idle ESXi shell and SSH sessions time out after 300 seconds or less",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that UserVars.ESXiShellInteractiveTimeOut is between 1 and 300 seconds, so idle ESXi Shell and SSH sessions are closed automatically (0 disables the timeout).",
+      "rationale": "Idle privileged shell sessions can be taken over by anyone with access to the administrator's workstation or the console.",
+      "business_impact": "An unattended root shell on the hypervisor gives full control of the host and all of its virtual machines to whoever reaches it.",
+      "recommendation": "Set UserVars.ESXiShellInteractiveTimeOut to 300 seconds or less.",
+      "remediation": "Run 'esxcli system settings advanced set -o /UserVars/ESXiShellInteractiveTimeOut -i 300' in the ESXi Shell, or change UserVars.ESXiShellInteractiveTimeOut under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "UserVars.ESXiShellInteractiveTimeOut",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 300
+            },
+            "expected": "1 to 300 seconds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX7-CONS-009",
+      "cis_id": "5.9",
+      "title": "Ensure the shell services timeout is set to 1 hour or less",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that UserVars.ESXiShellTimeOut is between 1 and 3600 seconds, so the ESXi Shell and SSH services stop accepting new logins automatically after being started (0 leaves them available indefinitely).",
+      "rationale": "Shell services started for maintenance are easily forgotten; an automatic timeout closes that window.",
+      "business_impact": "Shell services left running after maintenance keep a direct root login path to the hypervisor open to attackers.",
+      "recommendation": "Set UserVars.ESXiShellTimeOut to 3600 seconds or less.",
+      "remediation": "Run 'esxcli system settings advanced set -o /UserVars/ESXiShellTimeOut -i 3600' in the ESXi Shell, or change UserVars.ESXiShellTimeOut under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "UserVars.ESXiShellTimeOut",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 3600
+            },
+            "expected": "1 to 3600 seconds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX7-STOR-001",
+      "cis_id": "6.1",
+      "title": "Ensure bidirectional CHAP authentication for iSCSI traffic is enabled",
+      "section": "Storage",
+      "category": "Storage",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every iSCSI adapter requires CHAP in both directions (unidirectional and mutual CHAP level 'required').",
+      "rationale": "Mutual CHAP authenticates the storage target to the host as well as the host to the target, so a rogue target cannot present storage to the host.",
+      "business_impact": "Without mutual CHAP an attacker on the storage network could impersonate the iSCSI target or initiator to read, alter or substitute virtual disks.",
+      "recommendation": "Configure bidirectional CHAP with unique secrets on every iSCSI adapter.",
+      "remediation": "In the vSphere Client select the host > Configure > Storage Adapters > the iSCSI adapter > Properties > Authentication > Edit and choose 'Use bidirectional CHAP'. Avoid typing CHAP secrets on the ESXi command line, where shell history can record them.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.10"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "iscsi_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_iscsi_chap"
+      }
+    },
+    {
+      "id": "ESX7-NET-001",
+      "cis_id": "7.1",
+      "title": "Ensure the vSwitch Forged Transmits policy is set to reject",
+      "section": "vNetwork",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that forged transmits (frames whose source MAC address differs from the virtual NIC's own address) is set to Reject on every standard vSwitch and port group.",
+      "rationale": "Rejecting forged transmits keeps each virtual machine to its assigned identity and traffic on the virtual switch.",
+      "business_impact": "A compromised virtual machine could impersonate other systems' MAC addresses to intercept traffic or evade network access controls.",
+      "recommendation": "Set Forged transmits to Reject on every standard vSwitch and port group unless a documented workload, such as nested virtualization or a network appliance, requires otherwise.",
+      "remediation": "Run 'esxcli network vswitch standard policy security set -v <vSwitch> --allow-forged-transmits=false' and, for port groups that override the switch policy, 'esxcli network vswitch standard portgroup policy security set -p \"<port group>\" --allow-forged-transmits=false', or edit the switch security policy in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_vswitch_security",
+        "policy": "forged",
+        "label": "Forged transmits"
+      }
+    },
+    {
+      "id": "ESX7-NET-002",
+      "cis_id": "7.2",
+      "title": "Ensure the vSwitch MAC Address Change policy is set to reject",
+      "section": "vNetwork",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that mac address changes (a guest changing its effective MAC address and receiving frames for the new address) is set to Reject on every standard vSwitch and port group.",
+      "rationale": "Rejecting mac address changes keeps each virtual machine to its assigned identity and traffic on the virtual switch.",
+      "business_impact": "A compromised virtual machine could take over another system's MAC address and receive traffic intended for it.",
+      "recommendation": "Set MAC address changes to Reject on every standard vSwitch and port group unless a documented workload, such as nested virtualization or a network appliance, requires otherwise.",
+      "remediation": "Run 'esxcli network vswitch standard policy security set -v <vSwitch> --allow-mac-change=false' and, for port groups that override the switch policy, 'esxcli network vswitch standard portgroup policy security set -p \"<port group>\" --allow-mac-change=false', or edit the switch security policy in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_vswitch_security",
+        "policy": "mac",
+        "label": "MAC address changes"
+      }
+    },
+    {
+      "id": "ESX7-NET-003",
+      "cis_id": "7.3",
+      "title": "Ensure the vSwitch Promiscuous Mode policy is set to reject",
+      "section": "vNetwork",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "High",
+      "description": "Checks that promiscuous mode (a virtual NIC receiving every frame on the port group rather than only frames addressed to it) is set to Reject on every standard vSwitch and port group.",
+      "rationale": "Rejecting promiscuous mode keeps each virtual machine to its assigned identity and traffic on the virtual switch.",
+      "business_impact": "A compromised virtual machine in promiscuous mode can capture other virtual machines' traffic, including credentials sent without encryption.",
+      "recommendation": "Set Promiscuous mode to Reject on every standard vSwitch and port group unless a documented workload, such as nested virtualization or a network appliance, requires otherwise.",
+      "remediation": "Run 'esxcli network vswitch standard policy security set -v <vSwitch> --allow-promiscuous=false' and, for port groups that override the switch policy, 'esxcli network vswitch standard portgroup policy security set -p \"<port group>\" --allow-promiscuous=false', or edit the switch security policy in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_vswitch_security",
+        "policy": "promiscuous",
+        "label": "Promiscuous mode"
+      }
+    },
+    {
+      "id": "ESX7-NET-004",
+      "cis_id": "7.4",
+      "title": "Ensure port groups are not configured to the value of the native VLAN",
+      "section": "vNetwork",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no standard port group uses the physical switches' native VLAN (VLAN 1 unless another ID is set as esxi_native_vlan in config.json).",
+      "rationale": "Physical switches send native VLAN traffic untagged; virtual machines on it are exposed to VLAN-hopping attacks and to devices on unconfigured switch ports.",
+      "business_impact": "Virtual machines on the native VLAN can reach, or be reached from, network segments that should be separated.",
+      "recommendation": "Place port groups on dedicated VLANs other than the native VLAN.",
+      "remediation": "Change the VLAN ID with 'esxcli network vswitch standard portgroup set -p \"<port group>\" --vlan-id <id>' or in the port group settings, after confirming that the upstream switch ports carry that VLAN.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_portgroup_vlan",
+        "native_vlan": true,
+        "what": "the physical network's native VLAN"
+      }
+    },
+    {
+      "id": "ESX7-NET-006",
+      "cis_id": "7.6",
+      "title": "Ensure port groups are not configured to VLAN 4095 and 0 except for Virtual Guest Tagging (VGT)",
+      "section": "vNetwork",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that no standard port group uses VLAN 4095, which passes every VLAN tag to the guest (Virtual Guest Tagging), unless the port group is listed in esxi_vgt_portgroups in config.json. Port groups on VLAN 0 are listed for review.",
+      "rationale": "With Virtual Guest Tagging the guest operating system chooses its VLANs, so network separation depends on the guest instead of the virtual switch.",
+      "business_impact": "A compromised virtual machine on a VGT port group can tag its traffic onto any VLAN trunked to the host and reach segments it should not.",
+      "recommendation": "Use VLAN 4095 only for virtual machines that need guest tagging, such as virtual routers or firewalls, and document them.",
+      "remediation": "Assign a specific VLAN ID with 'esxcli network vswitch standard portgroup set -p \"<port group>\" --vlan-id <id>', or record approved guest-tagging port groups in config.json.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_portgroup_vlan",
+        "forbid": [
+          "4095"
+        ],
+        "what": "VLAN 4095 (Virtual Guest Tagging)",
+        "note_vlans": [
+          "0"
+        ]
+      }
+    },
+    {
+      "id": "ESX7-VMCOM-001",
+      "cis_id": "8.1.1",
+      "title": "Ensure only one remote console connection is permitted to a VM at any time",
+      "section": "Virtual Machines",
+      "category": "VM Communication",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets RemoteDisplay.maxConnections = 1, which limits the virtual machine console to one concurrent remote connection.",
+      "rationale": "Multiple simultaneous console connections let a second user watch or interact with an administrator's session.",
+      "business_impact": "Another console user could observe information displayed during an administrator's session or interfere with it.",
+      "recommendation": "Set RemoteDisplay.maxConnections to 1 on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set RemoteDisplay.maxConnections to 1 (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name RemoteDisplay.maxConnections -Value 1 -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "RemoteDisplay.maxConnections",
+        "expected": "1",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-001",
+      "cis_id": "8.2.1",
+      "title": "Ensure unnecessary floppy devices are disconnected",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a floppy drive present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "An unused floppy device adds emulation code that the guest can reach and can be used to attach media images.",
+      "recommendation": "Remove a floppy drive from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the floppy drive in Edit Settings (PowerCLI example: Get-VM <name> | Get-FloppyDrive | Remove-FloppyDrive). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^floppy\\d+$",
+        "label": "a floppy drive"
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-002",
+      "cis_id": "8.2.2",
+      "title": "Ensure unnecessary CD/DVD devices are disconnected",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a CD/DVD drive present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "A connected ISO image or host optical drive can bring unapproved software into the guest or be used to move data.",
+      "recommendation": "Remove a CD/DVD drive from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the CD/DVD drive in Edit Settings (PowerCLI example: Get-VM <name> | Get-CDDrive | Remove-CDDrive). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^(ide|sata)\\d+:\\d+$",
+        "label": "a CD/DVD drive",
+        "cdrom_only": true
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-003",
+      "cis_id": "8.2.3",
+      "title": "Ensure unnecessary parallel ports are disconnected",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a parallel port present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "A parallel port can be backed by a host file, creating an unmonitored data path out of the virtual machine.",
+      "recommendation": "Remove a parallel port from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the parallel port in Edit Settings (PowerCLI example: remove the parallel port in Edit Settings). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^parallel\\d+$",
+        "label": "a parallel port"
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-004",
+      "cis_id": "8.2.4",
+      "title": "Ensure unnecessary serial ports are disconnected",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a serial port present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "A serial port can be backed by a network connection or host file, creating an unmonitored data path out of the virtual machine.",
+      "recommendation": "Remove a serial port from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the serial port in Edit Settings (PowerCLI example: remove the serial port in Edit Settings). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^serial\\d+$",
+        "label": "a serial port"
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-005",
+      "cis_id": "8.2.5",
+      "title": "Ensure unnecessary USB devices are disconnected",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that no registered virtual machine has a USB controller present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "USB passthrough lets devices attached to the host or an administrator's client be connected to the guest, bypassing data-transfer controls.",
+      "recommendation": "Remove a USB controller from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the USB controller in Edit Settings (PowerCLI example: Get-VM <name> | Get-UsbDevice | Remove-UsbDevice, then remove the controller in Edit Settings). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^(usb|usb_xhci|ehci)$",
+        "label": "a USB controller"
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-006",
+      "cis_id": "8.2.6",
+      "title": "Ensure unauthorized modification and disconnection of devices is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.device.edit.disable = TRUE, which stops users and processes in the guest from modifying or disconnecting virtual devices.",
+      "rationale": "Without this setting, VMware Tools lets non-privileged guest users disconnect or change devices such as network adapters and CD/DVD drives.",
+      "business_impact": "A guest user could disconnect a network adapter or other device, disrupting monitoring, backups or service availability.",
+      "recommendation": "Set isolation.device.edit.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.device.edit.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.device.edit.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.device.edit.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-007",
+      "cis_id": "8.2.7",
+      "title": "Ensure unauthorized connection of devices is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.device.connectable.disable = TRUE, which stops users and processes in the guest from connecting removable virtual devices.",
+      "rationale": "Without this setting, VMware Tools lets non-privileged guest users connect devices, overriding decisions made by administrators.",
+      "business_impact": "A guest user could reconnect a disconnected network adapter or attach media, bypassing the administrator's configuration.",
+      "recommendation": "Set isolation.device.connectable.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.device.connectable.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.device.connectable.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.device.connectable.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMDEV-008",
+      "cis_id": "8.2.8",
+      "title": "Ensure PCI and PCIe device passthrough is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Devices",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that no registered virtual machine has a PCI or PCIe passthrough device (DirectPath I/O or Dynamic DirectPath I/O) present.",
+      "rationale": "Passthrough gives the guest direct access to physical hardware, including DMA, bypassing the hypervisor's device isolation.",
+      "business_impact": "A compromised guest with a passthrough device may read or corrupt host memory through DMA or device firmware attacks; such virtual machines also cannot use vMotion.",
+      "recommendation": "Use PCI passthrough only for documented workloads that require it, such as GPU compute, and review those virtual machines regularly.",
+      "remediation": "Power off the virtual machine and remove the PCI device in Edit Settings.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^pcipassthru\\d+$",
+        "label": "a PCI/PCIe passthrough device"
+      }
+    },
+    {
+      "id": "ESX7-VMMON-002",
+      "cis_id": "8.4.2",
+      "title": "Ensure Autologon is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.ghi.autologon.disable = TRUE, which disables the VMware Tools Guest Host Interaction automatic logon interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.ghi.autologon.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.ghi.autologon.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.ghi.autologon.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.ghi.autologon.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-003",
+      "cis_id": "8.4.3",
+      "title": "Ensure BIOS BBS is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.bios.bbs.disable = TRUE, which disables the VMware Tools BIOS Boot Specification (BBS) interface interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.bios.bbs.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.bios.bbs.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.bios.bbs.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.bios.bbs.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-004",
+      "cis_id": "8.4.4",
+      "title": "Ensure Guest Host Interaction Protocol Handler is set to disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.ghi.protocolhandler.info.disable = TRUE, which disables the VMware Tools Guest Host Interaction protocol handler information interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.ghi.protocolhandler.info.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.ghi.protocolhandler.info.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.ghi.protocolhandler.info.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.ghi.protocolhandler.info.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-005",
+      "cis_id": "8.4.5",
+      "title": "Ensure Unity Taskbar is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.unity.taskbar.disable = TRUE, which disables the VMware Tools Unity taskbar interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.unity.taskbar.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.unity.taskbar.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.unity.taskbar.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.unity.taskbar.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-006",
+      "cis_id": "8.4.6",
+      "title": "Ensure Unity Active is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.unityActive.disable = TRUE, which disables the VMware Tools Unity active mode interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.unityActive.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.unityActive.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.unityActive.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.unityActive.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-007",
+      "cis_id": "8.4.7",
+      "title": "Ensure Unity Window Contents is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.unity.windowContents.disable = TRUE, which disables the VMware Tools Unity window contents interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.unity.windowContents.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.unity.windowContents.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.unity.windowContents.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.unity.windowContents.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-008",
+      "cis_id": "8.4.8",
+      "title": "Ensure Unity Push Update is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.unity.push.update.disable = TRUE, which disables the VMware Tools Unity push updates interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.unity.push.update.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.unity.push.update.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.unity.push.update.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.unity.push.update.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-009",
+      "cis_id": "8.4.9",
+      "title": "Ensure Drag and Drop Version Get is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.vmxDnDVersionGet.disable = TRUE, which disables the VMware Tools drag-and-drop version query interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.vmxDnDVersionGet.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.vmxDnDVersionGet.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.vmxDnDVersionGet.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.vmxDnDVersionGet.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-010",
+      "cis_id": "8.4.10",
+      "title": "Ensure Drag and Drop Version Set is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.guestDnDVersionSet.disable = TRUE, which disables the VMware Tools drag-and-drop version setting interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.guestDnDVersionSet.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.guestDnDVersionSet.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.guestDnDVersionSet.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.guestDnDVersionSet.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-011",
+      "cis_id": "8.4.11",
+      "title": "Ensure Shell Action is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.ghi.host.shellAction.disable = TRUE, which disables the VMware Tools Guest Host Interaction shell actions interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.ghi.host.shellAction.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.ghi.host.shellAction.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.ghi.host.shellAction.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.ghi.host.shellAction.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-012",
+      "cis_id": "8.4.12",
+      "title": "Ensure Request Disk Topology is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.dispTopoRequest.disable = TRUE, which disables the VMware Tools display topology requests interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.dispTopoRequest.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.dispTopoRequest.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.dispTopoRequest.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.dispTopoRequest.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-013",
+      "cis_id": "8.4.13",
+      "title": "Ensure Trash Folder State is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.trashFolderState.disable = TRUE, which disables the VMware Tools trash folder state interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.trashFolderState.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.trashFolderState.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.trashFolderState.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.trashFolderState.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-014",
+      "cis_id": "8.4.14",
+      "title": "Ensure Guest Host Interaction Tray Icon is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.ghi.trayicon.disable = TRUE, which disables the VMware Tools Guest Host Interaction tray icon interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.ghi.trayicon.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.ghi.trayicon.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.ghi.trayicon.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.ghi.trayicon.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-015",
+      "cis_id": "8.4.15",
+      "title": "Ensure Unity is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.unity.disable = TRUE, which disables the VMware Tools Unity interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.unity.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.unity.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.unity.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.unity.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-016",
+      "cis_id": "8.4.16",
+      "title": "Ensure Unity Interlock is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.unityInterlockOperation.disable = TRUE, which disables the VMware Tools Unity interlock operations interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.unityInterlockOperation.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.unityInterlockOperation.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.unityInterlockOperation.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.unityInterlockOperation.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-017",
+      "cis_id": "8.4.17",
+      "title": "Ensure GetCreds is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.getCreds.disable = TRUE, which disables the VMware Tools GetCreds credential requests interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.getCreds.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.getCreds.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.getCreds.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.getCreds.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-018",
+      "cis_id": "8.4.18",
+      "title": "Ensure Host Guest File System Server is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.hgfsServerSet.disable = TRUE, which disables the VMware Tools Host Guest File System (HGFS) server interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.hgfsServerSet.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.hgfsServerSet.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.hgfsServerSet.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.hgfsServerSet.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-019",
+      "cis_id": "8.4.19",
+      "title": "Ensure Guest Host Interaction Launch Menu is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.ghi.launchmenu.change = TRUE, which disables the VMware Tools Guest Host Interaction launch menu changes interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.ghi.launchmenu.change to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.ghi.launchmenu.change to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.ghi.launchmenu.change -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.ghi.launchmenu.change",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-020",
+      "cis_id": "8.4.20",
+      "title": "Ensure memSchedFakeSampleStats is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.memSchedFakeSampleStats.disable = TRUE, which disables the VMware Tools memSchedFakeSampleStats memory statistics interface.",
+      "rationale": "These VMware Tools interfaces support desktop-hypervisor features (Unity, drag and drop, Guest Host Interaction) that vSphere does not use; disabling them removes guest-to-host communication channels.",
+      "business_impact": "Every unused guest-to-host interface is additional attack surface that a compromised guest could probe for a way out of the virtual machine.",
+      "recommendation": "Set isolation.tools.memSchedFakeSampleStats.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.memSchedFakeSampleStats.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.memSchedFakeSampleStats.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.memSchedFakeSampleStats.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMMON-021",
+      "cis_id": "8.4.21",
+      "title": "Ensure VM Console Copy operations are disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.tools.copy.disable = TRUE or leaves it unset (the default is equivalent), which blocks copying from the guest through the remote console.",
+      "rationale": "Copy and paste through the remote console moves data between the guest and an administrator's workstation outside network and data-loss controls.",
+      "business_impact": "Sensitive data could be copied out of the virtual machine, or untrusted content into it, without passing through any monitored channel.",
+      "recommendation": "Set isolation.tools.copy.disable to TRUE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.copy.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.copy.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.copy.disable",
+        "expected": "TRUE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX7-VMMON-022",
+      "cis_id": "8.4.22",
+      "title": "Ensure VM Console Drag and Drop operations is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.tools.dnd.disable = TRUE or leaves it unset (the default is equivalent), which blocks drag and drop between the remote console and the guest.",
+      "rationale": "Drag and drop through the remote console transfers files between the guest and an administrator's workstation outside network controls.",
+      "business_impact": "Files could be moved into or out of the virtual machine without passing through malware scanning or data-loss controls.",
+      "recommendation": "Set isolation.tools.dnd.disable to TRUE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.dnd.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.dnd.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.dnd.disable",
+        "expected": "TRUE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX7-VMMON-023",
+      "cis_id": "8.4.23",
+      "title": "Ensure VM Console GUI Options is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.setGUIOptions.enable = FALSE or leaves it unset (the default is equivalent), which stops the guest from enabling console copy and paste options.",
+      "rationale": "The GUI options channel lets the guest turn clipboard sharing back on; keeping it disabled preserves the copy and paste restrictions.",
+      "business_impact": "A guest could re-enable clipboard sharing and move data between the virtual machine and an administrator's workstation.",
+      "recommendation": "Set isolation.tools.setGUIOptions.enable to FALSE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.setGUIOptions.enable to FALSE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.setGUIOptions.enable -Value FALSE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.setGUIOptions.enable",
+        "expected": "FALSE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX7-VMMON-024",
+      "cis_id": "8.4.24",
+      "title": "Ensure VM Console Paste operations are disabled",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.tools.paste.disable = TRUE or leaves it unset (the default is equivalent), which blocks pasting into the guest through the remote console.",
+      "rationale": "Copy and paste through the remote console moves data between the guest and an administrator's workstation outside network and data-loss controls.",
+      "business_impact": "Untrusted content could be pasted into the guest, or sensitive data moved out, without passing through any monitored channel.",
+      "recommendation": "Set isolation.tools.paste.disable to TRUE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.paste.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.paste.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.paste.disable",
+        "expected": "TRUE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX7-VMRES-002",
+      "cis_id": "8.5.2",
+      "title": "Ensure hardware-based 3D acceleration is disabled and mks.enable3d is set to \"False\"",
+      "section": "Virtual Machines",
+      "category": "VM Resources",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets mks.enable3d = FALSE, which disables hardware-accelerated 3D graphics.",
+      "rationale": "3D acceleration exposes additional graphics emulation code in the hypervisor to the guest.",
+      "business_impact": "Flaws in virtual graphics devices have allowed guest-to-host escapes; disabling unneeded 3D support removes that attack surface.",
+      "recommendation": "Set mks.enable3d to FALSE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set mks.enable3d to FALSE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name mks.enable3d -Value FALSE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "mks.enable3d",
+        "expected": "FALSE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMSTO-001",
+      "cis_id": "8.6.1",
+      "title": "Ensure nonpersistent disks are limited",
+      "section": "Virtual Machines",
+      "category": "VM Storage",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no virtual disk uses a non-persistent mode, in which all changes are discarded when the virtual machine is powered off.",
+      "rationale": "Non-persistent disks erase every change, including an intruder's traces, when the virtual machine restarts.",
+      "business_impact": "Evidence of a compromise inside the guest disappears when the virtual machine is restarted, defeating investigation.",
+      "recommendation": "Use non-persistent disks only where discarding all changes is intended, such as kiosks or training labs, and document those virtual machines.",
+      "remediation": "Power off the virtual machine and change the disk mode to Dependent or Independent - Persistent in Edit Settings (PowerCLI: Get-VM <name> | Get-HardDisk | Set-HardDisk -Persistence Persistent).",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.4",
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_disk_mode",
+        "modes": [
+          "independent-nonpersistent",
+          "nonpersistent"
+        ]
+      }
+    },
+    {
+      "id": "ESX7-VMSTO-002",
+      "cis_id": "8.6.2",
+      "title": "Ensure virtual disk shrinking is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Storage",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.diskShrink.disable = TRUE, which blocks guest-initiated virtual disk shrinking.",
+      "rationale": "Disk shrinking can be started by non-privileged users in the guest and makes the virtual disk unavailable while it runs.",
+      "business_impact": "Repeated shrink operations from inside the guest can make the virtual machine's disks unavailable, causing a denial of service.",
+      "recommendation": "Set isolation.tools.diskShrink.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.diskShrink.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.diskShrink.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.diskShrink.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMSTO-003",
+      "cis_id": "8.6.3",
+      "title": "Ensure virtual disk wiping is disabled",
+      "section": "Virtual Machines",
+      "category": "VM Storage",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.diskWiper.disable = TRUE, which blocks guest-initiated virtual disk wiping.",
+      "rationale": "Disk wiping can be started by non-privileged users in the guest and makes the virtual disk unavailable while it runs.",
+      "business_impact": "Repeated wipe operations from inside the guest can make the virtual machine's disks unavailable, causing a denial of service.",
+      "recommendation": "Set isolation.tools.diskWiper.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.diskWiper.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.diskWiper.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.diskWiper.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMTLS-001",
+      "cis_id": "8.7.1",
+      "title": "Ensure the number of VM log files is configured properly",
+      "section": "Virtual Machines",
+      "category": "VM Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets log.keepOld = 10, which keeps ten rotated vmware.log files.",
+      "rationale": "A fixed number of rotated logs keeps enough history for troubleshooting without letting log files accumulate on the datastore.",
+      "business_impact": "Uncontrolled virtual machine log retention can consume datastore space; too little retention loses troubleshooting history.",
+      "recommendation": "Set log.keepOld to 10 on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set log.keepOld to 10 (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name log.keepOld -Value 10 -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.3"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "log.keepOld",
+        "expected": "10",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX7-VMTLS-002",
+      "cis_id": "8.7.2",
+      "title": "Ensure host information is not sent to guests",
+      "section": "Virtual Machines",
+      "category": "VM Tools",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets tools.guestlib.enableHostInfo = FALSE or leaves it unset (the default is equivalent), which stops VMware Tools from giving the guest performance information about the host.",
+      "rationale": "Host performance and configuration details are not needed by guests and help an attacker in a guest learn about the hypervisor.",
+      "business_impact": "Information about the host helps an attacker inside a guest plan further attacks on the hypervisor or other workloads.",
+      "recommendation": "Set tools.guestlib.enableHostInfo to FALSE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set tools.guestlib.enableHostInfo to FALSE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name tools.guestlib.enableHostInfo -Value FALSE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "tools.guestlib.enableHostInfo",
+        "expected": "FALSE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX7-VMTLS-003",
+      "cis_id": "8.7.3",
+      "title": "Ensure VM log file size is limited",
+      "section": "Virtual Machines",
+      "category": "VM Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets log.rotateSize = 1024000, which rotates vmware.log once it reaches about 1 MB.",
+      "rationale": "Size-based rotation stops a single virtual machine's log from growing without limit.",
+      "business_impact": "A guest that triggers excessive logging could fill the datastore, affecting every virtual machine stored on it.",
+      "recommendation": "Set log.rotateSize to 1024000 on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set log.rotateSize to 1024000 (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name log.rotateSize -Value 1024000 -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.3"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "log.rotateSize",
+        "expected": "1024000",
+        "missing_ok": false
+      }
+    }
+  ],
+  "manual_recommendations": [
+    {
+      "id": "ESX7-INST-001",
+      "cis_id": "1.1",
+      "title": "Ensure ESXi is properly patched",
+      "section": "Install",
+      "category": "Host Software",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure ESXi is properly patched. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.1 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "7.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-INST-003",
+      "cis_id": "1.3",
+      "title": "Ensure no unauthorized kernel modules are loaded on the host",
+      "section": "Install",
+      "category": "Host Software",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure no unauthorized kernel modules are loaded on the host. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.3 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-COMM-002",
+      "cis_id": "2.2",
+      "title": "Ensure the ESXi host firewall is configured to restrict access to services running on the host",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure the ESXi host firewall is configured to restrict access to services running on the host. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.2 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-COMM-004",
+      "cis_id": "2.4",
+      "title": "Ensure default self-signed certificate for ESXi communication is not used",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure default self-signed certificate for ESXi communication is not used. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.4 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-COMM-005",
+      "cis_id": "2.5",
+      "title": "Ensure SNMP is configured properly",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure SNMP is configured properly. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.5 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "12.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-COMM-006",
+      "cis_id": "2.6",
+      "title": "Ensure dvfilter API is not configured if not used",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure dvfilter API is not configured if not used. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.6 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "12.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-COMM-007",
+      "cis_id": "2.7",
+      "title": "Ensure expired and revoked SSL certificates are removed from the ESXi server",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure expired and revoked SSL certificates are removed from the ESXi server. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.7 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-COMM-008",
+      "cis_id": "2.8",
+      "title": "Ensure vSphere Authentication Proxy is used when adding hosts to Active Directory",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure vSphere Authentication Proxy is used when adding hosts to Active Directory. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.8 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-COMM-009",
+      "cis_id": "2.9",
+      "title": "Ensure VDS health check is disabled",
+      "section": "Communication",
+      "category": "Host Communication",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure VDS health check is disabled. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.9 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.14"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-LOG-002",
+      "cis_id": "3.2",
+      "title": "Ensure persistent logging is configured for all ESXi hosts",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure persistent logging is configured for all ESXi hosts. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.2 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2",
+        "8.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-ACC-002",
+      "cis_id": "4.2",
+      "title": "Ensure passwords are required to be complex",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure passwords are required to be complex. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.2 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-ACC-005",
+      "cis_id": "4.5",
+      "title": "Ensure previous 5 passwords are prohibited",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure previous 5 passwords are prohibited. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.5 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-ACC-006",
+      "cis_id": "4.6",
+      "title": "Ensure Active Directory is used for local user authentication",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure Active Directory is used for local user authentication. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.6 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-ACC-007",
+      "cis_id": "4.7",
+      "title": "Ensure only authorized users and groups belong to the esxAdminsGroup group",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure only authorized users and groups belong to the esxAdminsGroup group. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.7 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.1",
+        "5.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-ACC-008",
+      "cis_id": "4.8",
+      "title": "Ensure the Exception Users list is properly configured",
+      "section": "Access",
+      "category": "Host Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure the Exception Users list is properly configured. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.8 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.3",
+        "5.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-CONS-004",
+      "cis_id": "5.4",
+      "title": "Ensure CIM access is limited",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure CIM access is limited. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.4 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-CONS-007",
+      "cis_id": "5.7",
+      "title": "Ensure the SSH authorized_keys file is empty",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure the SSH authorized_keys file is empty. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.7 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "6.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-CONS-010",
+      "cis_id": "5.10",
+      "title": "Ensure DCUI has a trusted users list for lockdown mode",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure DCUI has a trusted users list for lockdown mode. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.10 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-CONS-011",
+      "cis_id": "5.11",
+      "title": "Ensure contents of exposed configuration files have not been modified",
+      "section": "Console",
+      "category": "Host Console",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure contents of exposed configuration files have not been modified. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.11 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-STOR-002",
+      "cis_id": "6.2",
+      "title": "Ensure the uniqueness of CHAP authentication secrets for iSCSI traffic",
+      "section": "Storage",
+      "category": "Storage",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure the uniqueness of CHAP authentication secrets for iSCSI traffic. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.2 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-STOR-003",
+      "cis_id": "6.3",
+      "title": "Ensure storage area network (SAN) resources are segregated properly",
+      "section": "Storage",
+      "category": "Storage",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure storage area network (SAN) resources are segregated properly. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.3 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.12"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-NET-005",
+      "cis_id": "7.5",
+      "title": "Ensure port groups are not configured to VLAN values reserved by upstream physical switches",
+      "section": "vNetwork",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure port groups are not configured to VLAN values reserved by upstream physical switches. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.5 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-NET-007",
+      "cis_id": "7.7",
+      "title": "Ensure Virtual Distributed Switch Netflow traffic is sent to an authorized collector",
+      "section": "vNetwork",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure Virtual Distributed Switch Netflow traffic is sent to an authorized collector. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.7 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "13.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-VMGST-001",
+      "cis_id": "8.3.1",
+      "title": "Ensure unnecessary or superfluous functions inside VMs are disabled",
+      "section": "Virtual Machines",
+      "category": "VM Guest",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure unnecessary or superfluous functions inside VMs are disabled. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.3.1 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-VMGST-002",
+      "cis_id": "8.3.2",
+      "title": "Ensure use of the VM console is limited",
+      "section": "Virtual Machines",
+      "category": "VM Guest",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure use of the VM console is limited. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.3.2 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-VMGST-003",
+      "cis_id": "8.3.3",
+      "title": "Ensure secure protocols are used for virtual serial port access",
+      "section": "Virtual Machines",
+      "category": "VM Guest",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure secure protocols are used for virtual serial port access. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.3.3 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-VMGST-004",
+      "cis_id": "8.3.4",
+      "title": "Ensure standard processes are used for VM deployment",
+      "section": "Virtual Machines",
+      "category": "VM Guest",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure standard processes are used for VM deployment. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.3.4 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-VMMON-001",
+      "cis_id": "8.4.1",
+      "title": "Ensure access to VMs through the dvfilter network APIs is configured correctly",
+      "section": "Virtual Machines",
+      "category": "VM Monitor",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure access to VMs through the dvfilter network APIs is configured correctly. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.4.1 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX7-VMRES-001",
+      "cis_id": "8.5.1",
+      "title": "Ensure VM limits are configured correctly",
+      "section": "Virtual Machines",
+      "category": "VM Resources",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: ensure VM limits are configured correctly. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.5.1 of the CIS VMware ESXi 7.0 Benchmark v1.6.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    }
+  ]
+}

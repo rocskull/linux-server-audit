@@ -1,0 +1,3264 @@
+{
+  "schema_version": "1.0",
+  "generated_by": "build_benchmark_definition.py",
+  "benchmark": {
+    "id": "vmware-esxi-8.0",
+    "framework": "CIS",
+    "name": "CIS VMware ESXi 8.0 Benchmark",
+    "short_name": "VMware ESXi 8.0",
+    "version": "1.4.0",
+    "published": "2026-08-27",
+    "source_document": "CIS_VMware_ESXi_8.0_Benchmark_v1.4.0_PDF.pdf",
+    "platform": {
+      "os_id": "esxi",
+      "version_ids": [
+        "8"
+      ],
+      "architectures": [
+        "x86_64"
+      ]
+    },
+    "profiles": [
+      "Level 1 (L1) - Corporate/Enterprise Environment (general use)",
+      "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+    ],
+    "automated_control_count": 38,
+    "manual_control_count": 96
+  },
+  "controls": [
+    {
+      "id": "ESX8-BASE-004",
+      "cis_id": "2.4",
+      "title": "Host image profile acceptance level must be PartnerSupported or higher",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "High",
+      "description": "Checks that the host image profile acceptance level, and the acceptance level of every installed VIB, is PartnerSupported, VMwareAccepted or VMwareCertified.",
+      "rationale": "The acceptance level decides which software bundles the host will install. CommunitySupported bundles are not tested or signed by VMware or a partner, yet run with full privileges in the hypervisor.",
+      "business_impact": "Unsigned or community VIBs can place kernel-level malware or unstable drivers in the hypervisor, compromising every virtual machine on the host; malicious VIBs have been used by attackers as a persistence mechanism.",
+      "recommendation": "Keep the host acceptance level at PartnerSupported or higher and remove installed VIBs below that level.",
+      "remediation": "Review the VIBs reported below PartnerSupported ('esxcli software vib list'), remove those without a supported replacement with 'esxcli software vib remove -n <name>', then run 'esxcli software acceptance set --level=PartnerSupported'.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.2"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_acceptance"
+      }
+    },
+    {
+      "id": "ESX8-BASE-006",
+      "cis_id": "2.6",
+      "title": "Host must have reliable time synchronization sources",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that NTP servers are configured, the NTP service is running and its startup policy is 'Start and stop with host'. When approved_time_servers is set in config.json, every configured server must be on that list.",
+      "rationale": "Accurate and consistent time is needed to correlate logs across systems, validate certificates and authenticate against Active Directory.",
+      "business_impact": "Clock drift makes host logs unreliable for incident timelines and can break directory authentication and certificate validation.",
+      "recommendation": "Configure at least two authoritative NTP sources and set the NTP service to start and stop with the host.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Time Configuration, edit Network Time Protocol, add the servers and set the startup policy to 'Start and stop with host'. From the ESXi Shell (7.0 Update 1 and later): 'esxcli system ntp set --server=<ntp1> --server=<ntp2> --enabled=true'.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.4"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_ntp"
+      }
+    },
+    {
+      "id": "ESX8-BASE-010",
+      "cis_id": "2.10",
+      "title": "Host must restrict inter-VM transparent page sharing",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that Mem.ShareForceSalting is 2, so transparent page sharing only shares memory between virtual machines that have the same salt value (by default, only within one virtual machine).",
+      "rationale": "Research has shown that memory pages shared between virtual machines can be used as a timing side channel to infer another virtual machine's memory contents.",
+      "business_impact": "A malicious or compromised virtual machine could use page-sharing side channels to recover secrets, such as cryptographic keys, from other virtual machines on the host.",
+      "recommendation": "Set Mem.ShareForceSalting to 2.",
+      "remediation": "Run 'esxcli system settings advanced set -o /Mem/ShareForceSalting -i 2' in the ESXi Shell, or change Mem.ShareForceSalting under Configure > System > Advanced System Settings in the vSphere Client. Virtual machines pick up the change when they are powered on or migrated.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Mem.ShareForceSalting",
+            "rule": {
+              "op": "equals",
+              "value": "2"
+            },
+            "expected": "2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX8-MGMT-001",
+      "cis_id": "3.1",
+      "title": "Host should deactivate SSH",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "High",
+      "description": "Checks that the SSH service startup policy is 'Start and stop manually', so SSH is only available while an administrator has started it for a specific task.",
+      "rationale": "Standing SSH access to the hypervisor bypasses vCenter Server role-based access control and gives a direct root shell on the host.",
+      "business_impact": "An attacker with stolen or guessed credentials gets an interactive root shell on the hypervisor and can encrypt or delete every virtual machine; enabling SSH is a common step in ESXi ransomware attacks.",
+      "recommendation": "Keep SSH stopped with a manual startup policy and start it only for time-limited maintenance, together with the ESXi Shell timeouts.",
+      "remediation": "In the vSphere Client (or the VMware Host Client) select the host > Configure > System > Services > SSH > Edit Startup Policy > 'Start and stop manually', and stop the service once this assessment has finished.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_service_disabled",
+        "service": "TSM-SSH",
+        "label": "SSH",
+        "audit_channel": true
+      }
+    },
+    {
+      "id": "ESX8-MGMT-002",
+      "cis_id": "3.2",
+      "title": "Host must deactivate the ESXi shell",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that the ESXi Shell service startup policy is 'Start and stop manually', so the local shell is only available while an administrator has started it.",
+      "rationale": "The ESXi Shell gives unrestricted root access from the server console or its remote management controller, outside vCenter Server permissions.",
+      "business_impact": "Anyone reaching the console or the hardware management controller (for example through a weak iLO/iDRAC password) could use a running ESXi Shell to take full control of the host.",
+      "recommendation": "Keep the ESXi Shell stopped with a manual startup policy and start it only for troubleshooting.",
+      "remediation": "In the vSphere Client (or the VMware Host Client) select the host > Configure > System > Services > ESXi Shell > Edit Startup Policy > 'Start and stop manually', and stop the service when it is not in use.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_service_disabled",
+        "service": "TSM",
+        "label": "ESXi Shell",
+        "audit_channel": true
+      }
+    },
+    {
+      "id": "ESX8-MGMT-003",
+      "cis_id": "3.3",
+      "title": "Host must deactivate the ESXi Managed Object Browser (MOB)",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that Config.HostAgent.plugins.solo.enableMob is false, so the Managed Object Browser web interface is disabled (falling back to the reverse proxy endpoint list when the option cannot be read).",
+      "rationale": "The Managed Object Browser exposes the host's object model over HTTPS and lets authenticated users view and change configuration outside the normal management tools. It exists for debugging.",
+      "business_impact": "An attacker holding host credentials can use the MOB from a web browser to explore and change host configuration, and the extra endpoint enlarges the host's attack surface.",
+      "recommendation": "Disable the Managed Object Browser and enable it only temporarily for troubleshooting.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Advanced System Settings and set Config.HostAgent.plugins.solo.enableMob to false. The benchmark notes that this must be changed from the vSphere interface and cannot be changed while the host is in lockdown mode.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_mob_disabled"
+      }
+    },
+    {
+      "id": "ESX8-MGMT-007",
+      "cis_id": "3.7",
+      "title": "Host must automatically terminate idle DCUI sessions",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that UserVars.DcuiTimeOut is between 1 and 600 seconds, so idle Direct Console User Interface sessions are logged out automatically (0 disables the timeout).",
+      "rationale": "A console session left logged in can be used by anyone with access to the physical console or the remote management controller.",
+      "business_impact": "An abandoned DCUI session lets someone at the console change management networking, restart agents or enable the shell without authenticating.",
+      "recommendation": "Set UserVars.DcuiTimeOut to 600 seconds or less.",
+      "remediation": "Run 'esxcli system settings advanced set -o /UserVars/DcuiTimeOut -i 600' in the ESXi Shell, or change UserVars.DcuiTimeOut under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "UserVars.DcuiTimeOut",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 600
+            },
+            "expected": "1 to 600 seconds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX8-MGMT-008",
+      "cis_id": "3.8",
+      "title": "Host must automatically terminate idle shells",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that UserVars.ESXiShellInteractiveTimeOut is between 1 and 300 seconds, so idle ESXi Shell and SSH sessions are closed automatically (0 disables the timeout).",
+      "rationale": "Idle privileged shell sessions can be taken over by anyone with access to the administrator's workstation or the console.",
+      "business_impact": "An unattended root shell on the hypervisor gives full control of the host and all of its virtual machines to whoever reaches it.",
+      "recommendation": "Set UserVars.ESXiShellInteractiveTimeOut to 300 seconds or less.",
+      "remediation": "Run 'esxcli system settings advanced set -o /UserVars/ESXiShellInteractiveTimeOut -i 300' in the ESXi Shell, or change UserVars.ESXiShellInteractiveTimeOut under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "UserVars.ESXiShellInteractiveTimeOut",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 300
+            },
+            "expected": "1 to 300 seconds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX8-MGMT-009",
+      "cis_id": "3.9",
+      "title": "Host must automatically deactivate shell services",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that UserVars.ESXiShellTimeOut is between 1 and 3600 seconds, so the ESXi Shell and SSH services stop accepting new logins automatically after being started (0 leaves them available indefinitely).",
+      "rationale": "Shell services started for maintenance are easily forgotten; an automatic timeout closes that window.",
+      "business_impact": "Shell services left running after maintenance keep a direct root login path to the hypervisor open to attackers.",
+      "recommendation": "Set UserVars.ESXiShellTimeOut to 3600 seconds or less.",
+      "remediation": "Run 'esxcli system settings advanced set -o /UserVars/ESXiShellTimeOut -i 3600' in the ESXi Shell, or change UserVars.ESXiShellTimeOut under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "UserVars.ESXiShellTimeOut",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 3600
+            },
+            "expected": "1 to 3600 seconds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX8-MGMT-012",
+      "cis_id": "3.12",
+      "title": "Host must lock an account after a specified number of failed login attempts",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that Security.AccountLockFailures is between 1 and 5, so a local account is locked after at most five consecutive failed logins (0 disables lockout).",
+      "rationale": "Account lockout limits online password guessing against local accounts through SSH, the Host Client and the API.",
+      "business_impact": "Without lockout an attacker can guess local passwords, including root's, at an unlimited rate.",
+      "recommendation": "Set Security.AccountLockFailures to 5 or fewer attempts.",
+      "remediation": "Run 'esxcli system settings advanced set -o /Security/AccountLockFailures -i 5' in the ESXi Shell, or change Security.AccountLockFailures under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "6.2"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Security.AccountLockFailures",
+            "rule": {
+              "op": "range",
+              "min": 1,
+              "max": 5
+            },
+            "expected": "1 to 5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX8-MGMT-013",
+      "cis_id": "3.13",
+      "title": "Host must unlock accounts after a specified timeout period",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that Security.AccountUnlockTime is at least 900 seconds, so a locked account stays locked for 15 minutes or longer.",
+      "rationale": "A short unlock time lets password guessing continue at a high rate despite lockout.",
+      "business_impact": "Brute-force attempts can resume shortly after each lockout, eroding the protection lockout provides.",
+      "recommendation": "Set Security.AccountUnlockTime to 900 seconds.",
+      "remediation": "Run 'esxcli system settings advanced set -o /Security/AccountUnlockTime -i 900' in the ESXi Shell, or change Security.AccountUnlockTime under Configure > System > Advanced System Settings in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Security.AccountUnlockTime",
+            "rule": {
+              "op": "min",
+              "value": 900
+            },
+            "expected": "900 seconds or more"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX8-MGMT-020",
+      "cis_id": "3.20",
+      "title": "Host must enable lockdown mode",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that lockdown mode is enabled (normal or strict), so the host is managed through vCenter Server, the DCUI and the Exception Users only.",
+      "rationale": "Lockdown mode forces administration through vCenter Server, where role-based access control, auditing and alarms apply, and blocks direct logins with local credentials.",
+      "business_impact": "Without lockdown mode anyone holding local credentials can manage the host directly, bypassing vCenter Server permissions and auditing.",
+      "recommendation": "Enable normal lockdown mode on hosts managed by vCenter Server and keep the Exception Users list to service accounts that require direct access.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Security Profile > Lockdown Mode > Edit and choose Normal. Lockdown mode needs vCenter Server; for a standalone host, record a documented exception instead.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.6"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_lockdown",
+        "allowed": [
+          "lockdownNormal",
+          "lockdownStrict"
+        ]
+      }
+    },
+    {
+      "id": "ESX8-MGMT-021",
+      "cis_id": "3.21",
+      "title": "Host should enable strict lockdown mode",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that the host is in strict lockdown mode, which also stops the Direct Console User Interface service.",
+      "rationale": "Strict lockdown removes the DCUI as a management path, so the host is managed only through vCenter Server and by Exception Users.",
+      "business_impact": "In normal lockdown mode anyone at the physical or remote console with DCUI access can still change the host's configuration.",
+      "recommendation": "Enable strict lockdown mode where losing DCUI access is acceptable and a tested recovery procedure exists.",
+      "remediation": "In the vSphere Client select the host > Configure > System > Security Profile > Lockdown Mode > Edit and choose Strict. Confirm vCenter Server connectivity and the Exception Users list first: a host that loses vCenter Server while in strict lockdown can become unmanageable until it is reinstalled.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.6"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_lockdown",
+        "allowed": [
+          "lockdownStrict"
+        ]
+      }
+    },
+    {
+      "id": "ESX8-LOG-002",
+      "cis_id": "4.2",
+      "title": "Host must transmit system logs to a remote log collector",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that Syslog.global.logHost names at least one remote syslog collector.",
+      "rationale": "Logs held only on the host are lost when it fails and can be altered or deleted by an attacker who compromises it.",
+      "business_impact": "Without remote logging, investigations of host compromise, ransomware deployment or configuration tampering lack trustworthy evidence.",
+      "recommendation": "Send host logs to a central syslog collector or SIEM, preferably over TLS.",
+      "remediation": "Run 'esxcli system syslog config set --loghost=ssl://<collector>:1514', 'esxcli system syslog reload' and 'esxcli network firewall ruleset set -r syslog -e true', or set Syslog.global.logHost under Advanced System Settings.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2",
+        "8.5",
+        "8.9"
+      ],
+      "nist_800_53": [],
+      "check": {
+        "type": "esxi_advanced",
+        "settings": [
+          {
+            "key": "Syslog.global.logHost",
+            "rule": {
+              "op": "present"
+            },
+            "expected": "at least one remote syslog collector"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ESX8-NET-006",
+      "cis_id": "5.6",
+      "title": "Host should reject forged transmits on standard virtual switches and port groups",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that forged transmits (frames whose source MAC address differs from the virtual NIC's own address) is set to Reject on every standard vSwitch and port group.",
+      "rationale": "Rejecting forged transmits keeps each virtual machine to its assigned identity and traffic on the virtual switch.",
+      "business_impact": "A compromised virtual machine could impersonate other systems' MAC addresses to intercept traffic or evade network access controls.",
+      "recommendation": "Set Forged transmits to Reject on every standard vSwitch and port group unless a documented workload, such as nested virtualization or a network appliance, requires otherwise.",
+      "remediation": "Run 'esxcli network vswitch standard policy security set -v <vSwitch> --allow-forged-transmits=false' and, for port groups that override the switch policy, 'esxcli network vswitch standard portgroup policy security set -p \"<port group>\" --allow-forged-transmits=false', or edit the switch security policy in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_vswitch_security",
+        "policy": "forged",
+        "label": "Forged transmits"
+      }
+    },
+    {
+      "id": "ESX8-NET-007",
+      "cis_id": "5.7",
+      "title": "Host should reject MAC address changes on standard virtual switches and port groups",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that mac address changes (a guest changing its effective MAC address and receiving frames for the new address) is set to Reject on every standard vSwitch and port group.",
+      "rationale": "Rejecting mac address changes keeps each virtual machine to its assigned identity and traffic on the virtual switch.",
+      "business_impact": "A compromised virtual machine could take over another system's MAC address and receive traffic intended for it.",
+      "recommendation": "Set MAC address changes to Reject on every standard vSwitch and port group unless a documented workload, such as nested virtualization or a network appliance, requires otherwise.",
+      "remediation": "Run 'esxcli network vswitch standard policy security set -v <vSwitch> --allow-mac-change=false' and, for port groups that override the switch policy, 'esxcli network vswitch standard portgroup policy security set -p \"<port group>\" --allow-mac-change=false', or edit the switch security policy in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_vswitch_security",
+        "policy": "mac",
+        "label": "MAC address changes"
+      }
+    },
+    {
+      "id": "ESX8-NET-008",
+      "cis_id": "5.8",
+      "title": "Host should reject promiscuous mode requests on standard virtual switches and port groups",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "High",
+      "description": "Checks that promiscuous mode (a virtual NIC receiving every frame on the port group rather than only frames addressed to it) is set to Reject on every standard vSwitch and port group.",
+      "rationale": "Rejecting promiscuous mode keeps each virtual machine to its assigned identity and traffic on the virtual switch.",
+      "business_impact": "A compromised virtual machine in promiscuous mode can capture other virtual machines' traffic, including credentials sent without encryption.",
+      "recommendation": "Set Promiscuous mode to Reject on every standard vSwitch and port group unless a documented workload, such as nested virtualization or a network appliance, requires otherwise.",
+      "remediation": "Run 'esxcli network vswitch standard policy security set -v <vSwitch> --allow-promiscuous=false' and, for port groups that override the switch policy, 'esxcli network vswitch standard portgroup policy security set -p \"<port group>\" --allow-promiscuous=false', or edit the switch security policy in the vSphere Client.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_vswitch_security",
+        "policy": "promiscuous",
+        "label": "Promiscuous mode"
+      }
+    },
+    {
+      "id": "ESX8-NET-009",
+      "cis_id": "5.9",
+      "title": "Host must restrict access to a default or native VLAN on standard virtual switches",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no standard port group uses the physical switches' native VLAN (VLAN 1 unless another ID is set as esxi_native_vlan in config.json).",
+      "rationale": "Physical switches send native VLAN traffic untagged; virtual machines on it are exposed to VLAN-hopping attacks and to devices on unconfigured switch ports.",
+      "business_impact": "Virtual machines on the native VLAN can reach, or be reached from, network segments that should be separated.",
+      "recommendation": "Place port groups on dedicated VLANs other than the native VLAN.",
+      "remediation": "Change the VLAN ID with 'esxcli network vswitch standard portgroup set -p \"<port group>\" --vlan-id <id>' or in the port group settings, after confirming that the upstream switch ports carry that VLAN.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_portgroup_vlan",
+        "native_vlan": true,
+        "what": "the physical network's native VLAN"
+      }
+    },
+    {
+      "id": "ESX8-NET-010",
+      "cis_id": "5.10",
+      "title": "Host must restrict the use of Virtual Guest Tagging (VGT) on standard virtual switches",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that no standard port group uses VLAN 4095, which passes every VLAN tag to the guest (Virtual Guest Tagging), unless the port group is listed in esxi_vgt_portgroups in config.json. Port groups on VLAN 0 are listed for review.",
+      "rationale": "With Virtual Guest Tagging the guest operating system chooses its VLANs, so network separation depends on the guest instead of the virtual switch.",
+      "business_impact": "A compromised virtual machine on a VGT port group can tag its traffic onto any VLAN trunked to the host and reach segments it should not.",
+      "recommendation": "Use VLAN 4095 only for virtual machines that need guest tagging, such as virtual routers or firewalls, and document them.",
+      "remediation": "Assign a specific VLAN ID with 'esxcli network vswitch standard portgroup set -p \"<port group>\" --vlan-id <id>', or record approved guest-tagging port groups in config.json.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "standard_vswitch_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_portgroup_vlan",
+        "forbid": [
+          "4095"
+        ],
+        "what": "VLAN 4095 (Virtual Guest Tagging)",
+        "note_vlans": [
+          "0"
+        ]
+      }
+    },
+    {
+      "id": "ESX8-ISCSI-001",
+      "cis_id": "6.3.1",
+      "title": "Host iSCSI client, if enabled, must employ bidirectional/mutual CHAP authentication",
+      "section": "Features",
+      "category": "iSCSI",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every iSCSI adapter requires CHAP in both directions (unidirectional and mutual CHAP level 'required').",
+      "rationale": "Mutual CHAP authenticates the storage target to the host as well as the host to the target, so a rogue target cannot present storage to the host.",
+      "business_impact": "Without mutual CHAP an attacker on the storage network could impersonate the iSCSI target or initiator to read, alter or substitute virtual disks.",
+      "recommendation": "Configure bidirectional CHAP with unique secrets on every iSCSI adapter.",
+      "remediation": "In the vSphere Client select the host > Configure > Storage Adapters > the iSCSI adapter > Properties > Authentication > Edit and choose 'Use bidirectional CHAP'. Avoid typing CHAP secrets on the ESXi command line, where shell history can record them.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.10"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "iscsi_present"
+        }
+      ],
+      "check": {
+        "type": "esxi_iscsi_chap"
+      }
+    },
+    {
+      "id": "ESX8-VM-004",
+      "cis_id": "7.4",
+      "title": "Virtual machines should deactivate 3D graphics features when not required",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets mks.enable3d = FALSE or leaves it unset (the default is equivalent), which disables hardware-accelerated 3D graphics.",
+      "rationale": "3D acceleration exposes additional graphics emulation code in the hypervisor to the guest.",
+      "business_impact": "Flaws in virtual graphics devices have allowed guest-to-host escapes; disabling unneeded 3D support removes that attack surface.",
+      "recommendation": "Set mks.enable3d to FALSE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set mks.enable3d to FALSE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name mks.enable3d -Value FALSE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "mks.enable3d",
+        "expected": "FALSE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX8-VM-006",
+      "cis_id": "7.6",
+      "title": "Virtual machines must limit console sharing",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets RemoteDisplay.maxConnections = 1, which limits the virtual machine console to one concurrent remote connection.",
+      "rationale": "Multiple simultaneous console connections let a second user watch or interact with an administrator's session.",
+      "business_impact": "Another console user could observe information displayed during an administrator's session or interfere with it.",
+      "recommendation": "Set RemoteDisplay.maxConnections to 1 on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set RemoteDisplay.maxConnections to 1 (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name RemoteDisplay.maxConnections -Value 1 -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "RemoteDisplay.maxConnections",
+        "expected": "1",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX8-VM-007",
+      "cis_id": "7.7",
+      "title": "Virtual machines must limit PCI/PCIe device passthrough functionality",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that no registered virtual machine has a PCI or PCIe passthrough device (DirectPath I/O or Dynamic DirectPath I/O) present.",
+      "rationale": "Passthrough gives the guest direct access to physical hardware, including DMA, bypassing the hypervisor's device isolation.",
+      "business_impact": "A compromised guest with a passthrough device may read or corrupt host memory through DMA or device firmware attacks; such virtual machines also cannot use vMotion.",
+      "recommendation": "Use PCI passthrough only for documented workloads that require it, such as GPU compute, and review those virtual machines regularly.",
+      "remediation": "Power off the virtual machine and remove the PCI device in Edit Settings.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^pcipassthru\\d+$",
+        "label": "a PCI/PCIe passthrough device"
+      }
+    },
+    {
+      "id": "ESX8-VM-008",
+      "cis_id": "7.8",
+      "title": "Ensure unauthorized modification and disconnection of devices is disabled",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.device.edit.disable = TRUE, which stops users and processes in the guest from modifying or disconnecting virtual devices.",
+      "rationale": "Without this setting, VMware Tools lets non-privileged guest users disconnect or change devices such as network adapters and CD/DVD drives.",
+      "business_impact": "A guest user could disconnect a network adapter or other device, disrupting monitoring, backups or service availability.",
+      "recommendation": "Set isolation.device.edit.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.device.edit.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.device.edit.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.device.edit.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX8-VM-009",
+      "cis_id": "7.9",
+      "title": "Virtual machines must prevent unauthorized connection of devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.device.connectable.disable = TRUE, which stops users and processes in the guest from connecting removable virtual devices.",
+      "rationale": "Without this setting, VMware Tools lets non-privileged guest users connect devices, overriding decisions made by administrators.",
+      "business_impact": "A guest user could reconnect a disconnected network adapter or attach media, bypassing the administrator's configuration.",
+      "recommendation": "Set isolation.device.connectable.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.device.connectable.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.device.connectable.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.device.connectable.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX8-VM-012",
+      "cis_id": "7.12",
+      "title": "Virtual machines must remove unnecessary USB/XHCI devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that no registered virtual machine has a USB controller present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "USB passthrough lets devices attached to the host or an administrator's client be connected to the guest, bypassing data-transfer controls.",
+      "recommendation": "Remove a USB controller from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the USB controller in Edit Settings (PowerCLI example: Get-VM <name> | Get-UsbDevice | Remove-UsbDevice, then remove the controller in Edit Settings). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^(usb|usb_xhci|ehci)$",
+        "label": "a USB controller"
+      }
+    },
+    {
+      "id": "ESX8-VM-013",
+      "cis_id": "7.13",
+      "title": "Virtual machines must remove unnecessary serial port devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a serial port present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "A serial port can be backed by a network connection or host file, creating an unmonitored data path out of the virtual machine.",
+      "recommendation": "Remove a serial port from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the serial port in Edit Settings (PowerCLI example: remove the serial port in Edit Settings). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^serial\\d+$",
+        "label": "a serial port"
+      }
+    },
+    {
+      "id": "ESX8-VM-014",
+      "cis_id": "7.14",
+      "title": "Virtual machines must remove unnecessary parallel port devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a parallel port present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "A parallel port can be backed by a host file, creating an unmonitored data path out of the virtual machine.",
+      "recommendation": "Remove a parallel port from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the parallel port in Edit Settings (PowerCLI example: remove the parallel port in Edit Settings). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^parallel\\d+$",
+        "label": "a parallel port"
+      }
+    },
+    {
+      "id": "ESX8-VM-015",
+      "cis_id": "7.15",
+      "title": "Virtual machines must remove unnecessary CD/DVD devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a CD/DVD drive present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "A connected ISO image or host optical drive can bring unapproved software into the guest or be used to move data.",
+      "recommendation": "Remove a CD/DVD drive from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the CD/DVD drive in Edit Settings (PowerCLI example: Get-VM <name> | Get-CDDrive | Remove-CDDrive). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^(ide|sata)\\d+:\\d+$",
+        "label": "a CD/DVD drive",
+        "cdrom_only": true
+      }
+    },
+    {
+      "id": "ESX8-VM-016",
+      "cis_id": "7.16",
+      "title": "Virtual machines must remove unnecessary floppy devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that no registered virtual machine has a floppy drive present (the matching .present option is absent or FALSE).",
+      "rationale": "Each virtual device is emulation code in the hypervisor that the guest can interact with; removing devices the workload does not use reduces attack surface.",
+      "business_impact": "An unused floppy device adds emulation code that the guest can reach and can be used to attach media images.",
+      "recommendation": "Remove a floppy drive from virtual machines that do not need it.",
+      "remediation": "Power off the virtual machine and remove the floppy drive in Edit Settings (PowerCLI example: Get-VM <name> | Get-FloppyDrive | Remove-FloppyDrive). Re-add a device temporarily only when an administrator needs it.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_device_absent",
+        "device_regex": "^floppy\\d+$",
+        "label": "a floppy drive"
+      }
+    },
+    {
+      "id": "ESX8-VM-017",
+      "cis_id": "7.17",
+      "title": "Virtual machines must deactivate console drag and drop operations",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.tools.dnd.disable = TRUE or leaves it unset (the default is equivalent), which blocks drag and drop between the remote console and the guest.",
+      "rationale": "Drag and drop through the remote console transfers files between the guest and an administrator's workstation outside network controls.",
+      "business_impact": "Files could be moved into or out of the virtual machine without passing through malware scanning or data-loss controls.",
+      "recommendation": "Set isolation.tools.dnd.disable to TRUE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.dnd.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.dnd.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.dnd.disable",
+        "expected": "TRUE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX8-VM-018",
+      "cis_id": "7.18",
+      "title": "Virtual machines must deactivate console copy operations",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.tools.copy.disable = TRUE or leaves it unset (the default is equivalent), which blocks copying from the guest through the remote console.",
+      "rationale": "Copy and paste through the remote console moves data between the guest and an administrator's workstation outside network and data-loss controls.",
+      "business_impact": "Sensitive data could be copied out of the virtual machine, or untrusted content into it, without passing through any monitored channel.",
+      "recommendation": "Set isolation.tools.copy.disable to TRUE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.copy.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.copy.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.copy.disable",
+        "expected": "TRUE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX8-VM-019",
+      "cis_id": "7.19",
+      "title": "Virtual machines must deactivate console paste operations",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Medium",
+      "description": "Checks that every registered virtual machine sets isolation.tools.paste.disable = TRUE or leaves it unset (the default is equivalent), which blocks pasting into the guest through the remote console.",
+      "rationale": "Copy and paste through the remote console moves data between the guest and an administrator's workstation outside network and data-loss controls.",
+      "business_impact": "Untrusted content could be pasted into the guest, or sensitive data moved out, without passing through any monitored channel.",
+      "recommendation": "Set isolation.tools.paste.disable to TRUE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.paste.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.paste.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.paste.disable",
+        "expected": "TRUE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX8-VM-021",
+      "cis_id": "7.21",
+      "title": "Virtual machines must deactivate virtual disk shrinking operations",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.diskShrink.disable = TRUE, which blocks guest-initiated virtual disk shrinking.",
+      "rationale": "Disk shrinking can be started by non-privileged users in the guest and makes the virtual disk unavailable while it runs.",
+      "business_impact": "Repeated shrink operations from inside the guest can make the virtual machine's disks unavailable, causing a denial of service.",
+      "recommendation": "Set isolation.tools.diskShrink.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.diskShrink.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.diskShrink.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.diskShrink.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX8-VM-022",
+      "cis_id": "7.22",
+      "title": "Virtual machines must deactivate virtual disk wiping operations",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets isolation.tools.diskWiper.disable = TRUE, which blocks guest-initiated virtual disk wiping.",
+      "rationale": "Disk wiping can be started by non-privileged users in the guest and makes the virtual disk unavailable while it runs.",
+      "business_impact": "Repeated wipe operations from inside the guest can make the virtual machine's disks unavailable, causing a denial of service.",
+      "recommendation": "Set isolation.tools.diskWiper.disable to TRUE on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set isolation.tools.diskWiper.disable to TRUE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name isolation.tools.diskWiper.disable -Value TRUE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "isolation.tools.diskWiper.disable",
+        "expected": "TRUE",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX8-VM-024",
+      "cis_id": "7.24",
+      "title": "Virtual machines must not be able to obtain host information from the hypervisor",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets tools.guestlib.enableHostInfo = FALSE or leaves it unset (the default is equivalent), which stops VMware Tools from giving the guest performance information about the host.",
+      "rationale": "Host performance and configuration details are not needed by guests and help an attacker in a guest learn about the hypervisor.",
+      "business_impact": "Information about the host helps an attacker inside a guest plan further attacks on the hypervisor or other workloads.",
+      "recommendation": "Set tools.guestlib.enableHostInfo to FALSE on every virtual machine or leave it at its default.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set tools.guestlib.enableHostInfo to FALSE (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name tools.guestlib.enableHostInfo -Value FALSE -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "tools.guestlib.enableHostInfo",
+        "expected": "FALSE",
+        "missing_ok": true
+      }
+    },
+    {
+      "id": "ESX8-VM-026",
+      "cis_id": "7.26",
+      "title": "Virtual machines must limit the number of retained diagnostic logs",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets log.keepOld = 10, which keeps ten rotated vmware.log files.",
+      "rationale": "A fixed number of rotated logs keeps enough history for troubleshooting without letting log files accumulate on the datastore.",
+      "business_impact": "Uncontrolled virtual machine log retention can consume datastore space; too little retention loses troubleshooting history.",
+      "recommendation": "Set log.keepOld to 10 on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set log.keepOld to 10 (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name log.keepOld -Value 10 -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.3"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "log.keepOld",
+        "expected": "10",
+        "missing_ok": false
+      }
+    },
+    {
+      "id": "ESX8-VM-027",
+      "cis_id": "7.27",
+      "title": "Virtual machines must limit the size of diagnostic logs",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "automated": true,
+      "severity": "Low",
+      "description": "Checks that every registered virtual machine sets log.rotateSize = 1024000, which rotates vmware.log once it reaches about 1 MB.",
+      "rationale": "Size-based rotation stops a single virtual machine's log from growing without limit.",
+      "business_impact": "A guest that triggers excessive logging could fill the datastore, affecting every virtual machine stored on it.",
+      "recommendation": "Set log.rotateSize to 1024000 on every virtual machine.",
+      "remediation": "Power off the virtual machine, open Edit Settings > VM Options > Advanced > Edit Configuration in the vSphere Client and set log.rotateSize to 1024000 (PowerCLI: Get-VM <name> | New-AdvancedSetting -Name log.rotateSize -Value 1024000 -Force). The setting takes effect at the next power-on.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.3"
+      ],
+      "nist_800_53": [],
+      "applies_if": [
+        {
+          "type": "vms_present"
+        }
+      ],
+      "check": {
+        "type": "vmx_setting",
+        "key": "log.rotateSize",
+        "expected": "1024000",
+        "missing_ok": false
+      }
+    }
+  ],
+  "manual_recommendations": [
+    {
+      "id": "ESX8-HW-001",
+      "cis_id": "1.1",
+      "title": "Host hardware must have auditable, authentic, and up to date system & device firmware",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host hardware must have auditable, authentic, and up to date system & device firmware. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.2",
+        "16.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-002",
+      "cis_id": "1.2",
+      "title": "Host hardware must enable UEFI Secure Boot",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host hardware must enable UEFI Secure Boot. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "16.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-003",
+      "cis_id": "1.3",
+      "title": "Host hardware must enable Intel TXT, if available",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host hardware must enable Intel TXT, if available. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.3 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-004",
+      "cis_id": "1.4",
+      "title": "Host hardware must enable and configure a TPM 2.0",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host hardware must enable and configure a TPM 2.0. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.4 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-005",
+      "cis_id": "1.5",
+      "title": "Host integrated hardware management controller must be secure",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host integrated hardware management controller must be secure. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-006",
+      "cis_id": "1.6",
+      "title": "Host integrated hardware management controller must enable time synchronization",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host integrated hardware management controller must enable time synchronization. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.6 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-007",
+      "cis_id": "1.7",
+      "title": "Host integrated hardware management controller must enable remote logging of events",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host integrated hardware management controller must enable remote logging of events. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.7 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-008",
+      "cis_id": "1.8",
+      "title": "Host integrated hardware management controller must secure authentication",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host integrated hardware management controller must secure authentication. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.8 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-009",
+      "cis_id": "1.9",
+      "title": "Host hardware must enable AMD SEV-ES, if available",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host hardware must enable AMD SEV-ES, if available. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.9 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-010",
+      "cis_id": "1.10",
+      "title": "Host hardware must enable Intel SGX, if available",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host hardware must enable Intel SGX, if available. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.10 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-011",
+      "cis_id": "1.11",
+      "title": "Host hardware must secure unused external hardware ports",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host hardware must secure unused external hardware ports. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-HW-012",
+      "cis_id": "1.12",
+      "title": "Host integrated hardware management controller must deactivate internal networking",
+      "section": "Hardware",
+      "category": "Host Hardware",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host integrated hardware management controller must deactivate internal networking. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 1.12 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-001",
+      "cis_id": "2.1",
+      "title": "Host must run software that has not reached End of General Support status",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must run software that has not reached End of General Support status. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-002",
+      "cis_id": "2.2",
+      "title": "Host must have all software updates installed",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must have all software updates installed. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "7.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-003",
+      "cis_id": "2.3",
+      "title": "Host must enable Secure Boot enforcement",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must enable Secure Boot enforcement. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.3 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-005",
+      "cis_id": "2.5",
+      "title": "Host must only run binaries delivered via signed VIB",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must only run binaries delivered via signed VIB. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.3",
+        "10.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-007",
+      "cis_id": "2.7",
+      "title": "Host must have time synchronization services enabled and running",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must have time synchronization services enabled and running. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.7 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-008",
+      "cis_id": "2.8",
+      "title": "Host must require TPM-based configuration encryption",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must require TPM-based configuration encryption. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.8 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.11"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-009",
+      "cis_id": "2.9",
+      "title": "Host must not suppress warnings about unmitigated hyperthreading vulnerabilities",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must not suppress warnings about unmitigated hyperthreading vulnerabilities. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.9 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.5",
+        "8.10"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-011",
+      "cis_id": "2.11",
+      "title": "Host must use sufficient entropy for cryptographic operations",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must use sufficient entropy for cryptographic operations. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-BASE-012",
+      "cis_id": "2.12",
+      "title": "Host must enable volatile key destruction",
+      "section": "Base",
+      "category": "Host Software and Base Configuration",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must enable volatile key destruction. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 2.12 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-004",
+      "cis_id": "3.4",
+      "title": "Host must deactivate SLP",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must deactivate SLP. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.4 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-005",
+      "cis_id": "3.5",
+      "title": "Host must deactivate CIM",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must deactivate CIM. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-006",
+      "cis_id": "3.6",
+      "title": "Host should deactivate SNMP",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host should deactivate SNMP. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.6 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-010",
+      "cis_id": "3.10",
+      "title": "Host must not suppress warnings that the shell is enabled",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must not suppress warnings that the shell is enabled. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.10 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "13.11"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-011",
+      "cis_id": "3.11",
+      "title": "Host must enforce password complexity",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must enforce password complexity. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-014",
+      "cis_id": "3.14",
+      "title": "Host must configure the password history setting to restrict the reuse of passwords",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must configure the password history setting to restrict the reuse of passwords. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.14 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-015",
+      "cis_id": "3.15",
+      "title": "Host must be configured with an appropriate maximum password age",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must be configured with an appropriate maximum password age. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.15 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-016",
+      "cis_id": "3.16",
+      "title": "Host must configure a session timeout for the API",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must configure a session timeout for the API. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.16 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3",
+        "12.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-017",
+      "cis_id": "3.17",
+      "title": "Host must automatically terminate idle host client sessions",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must automatically terminate idle host client sessions. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.17 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "12.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-018",
+      "cis_id": "3.18",
+      "title": "Host must have an accurate DCUI.Access list",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must have an accurate DCUI.Access list. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.18 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.5",
+        "5.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-019",
+      "cis_id": "3.19",
+      "title": "Host must have an accurate Exception Users list",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must have an accurate Exception Users list. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.19 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.3",
+        "5.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-022",
+      "cis_id": "3.22",
+      "title": "Host must deny shell access for the dcui account",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must deny shell access for the dcui account. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.22 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.5",
+        "2.7"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-023",
+      "cis_id": "3.23",
+      "title": "Host must deny shell access for the vpxuser account",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must deny shell access for the vpxuser account. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.23 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.5",
+        "2.7"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-024",
+      "cis_id": "3.24",
+      "title": "Host must display a login banner for the DCUI and Host Client",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must display a login banner for the DCUI and Host Client. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.24 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-025",
+      "cis_id": "3.25",
+      "title": "Host must display a login banner for SSH connections",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must display a login banner for SSH connections. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.25 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-MGMT-026",
+      "cis_id": "3.26",
+      "title": "Host must enable the highest version of TLS supported",
+      "section": "Management",
+      "category": "Host Management Access",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must enable the highest version of TLS supported. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 3.26 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.11"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-001",
+      "cis_id": "4.1",
+      "title": "Host must configure a persistent log location for all locally stored system logs",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must configure a persistent log location for all locally stored system logs. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2",
+        "8.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-003",
+      "cis_id": "4.3",
+      "title": "Host must log sufficient information for events",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must log sufficient information for events. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.3 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-004",
+      "cis_id": "4.4",
+      "title": "Host must set the logging informational level to info",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must set the logging informational level to info. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.4 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.3",
+        "8.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-005",
+      "cis_id": "4.5",
+      "title": "Host must deactivate log filtering",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must deactivate log filtering. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2",
+        "8.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-006",
+      "cis_id": "4.6",
+      "title": "Host must enable audit record logging",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must enable audit record logging. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.6 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-007",
+      "cis_id": "4.7",
+      "title": "Host must configure a persistent log location for all locally stored audit records",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must configure a persistent log location for all locally stored audit records. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.7 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.9"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-008",
+      "cis_id": "4.8",
+      "title": "Host must store one week of audit records",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must store one week of audit records. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.8 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2",
+        "8.9"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-009",
+      "cis_id": "4.9",
+      "title": "Host must transmit audit records to a remote log collector",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must transmit audit records to a remote log collector. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.9 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.9"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-010",
+      "cis_id": "4.10",
+      "title": "Host must verify certificates for TLS remote logging endpoints",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must verify certificates for TLS remote logging endpoints. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.10 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "13.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-LOG-011",
+      "cis_id": "4.11",
+      "title": "Host must use strict x509 verification for TLS-enabled remote logging endpoints",
+      "section": "Logging",
+      "category": "Host Logging",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must use strict x509 verification for TLS-enabled remote logging endpoints. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 4.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "13.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-NET-001",
+      "cis_id": "5.1",
+      "title": "Host firewall must only allow traffic from authorized networks",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host firewall must only allow traffic from authorized networks. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-NET-002",
+      "cis_id": "5.2",
+      "title": "Host must block network traffic by default",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must block network traffic by default. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.5",
+        "2.7"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-NET-003",
+      "cis_id": "5.3",
+      "title": "Host must restrict use of the dvFilter network API",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must restrict use of the dvFilter network API. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.3 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "12.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-NET-004",
+      "cis_id": "5.4",
+      "title": "Host must filter Bridge Protocol Data Unit (BPDU) packets",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must filter Bridge Protocol Data Unit (BPDU) packets. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.4 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "9.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-NET-005",
+      "cis_id": "5.5",
+      "title": "Host should deactivate virtual hardware management network interfaces",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host should deactivate virtual hardware management network interfaces. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-NET-011",
+      "cis_id": "5.11",
+      "title": "Host must isolate management communications",
+      "section": "Network",
+      "category": "Virtual Networking",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must isolate management communications. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 5.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "12.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-CIM-001",
+      "cis_id": "6.1.1",
+      "title": "Host CIM services, if enabled, must limit access",
+      "section": "Features",
+      "category": "CIM",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host CIM services, if enabled, must limit access. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.1.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-STOR-001",
+      "cis_id": "6.2.1",
+      "title": "Host must isolate storage communications",
+      "section": "Features",
+      "category": "Core Storage",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must isolate storage communications. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.2.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.12"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-STOR-002",
+      "cis_id": "6.2.2",
+      "title": "Host must ensure all datastores have unique names",
+      "section": "Features",
+      "category": "Core Storage",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host must ensure all datastores have unique names. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.2.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.12"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-ISCSI-002",
+      "cis_id": "6.3.2",
+      "title": "Host iSCSI client, if enabled, must employ unique CHAP authentication secrets",
+      "section": "Features",
+      "category": "iSCSI",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host iSCSI client, if enabled, must employ unique CHAP authentication secrets. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.3.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "5.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SNMP-001",
+      "cis_id": "6.4.1",
+      "title": "Host SNMP services, if enabled, must limit access",
+      "section": "Features",
+      "category": "SNMP",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SNMP services, if enabled, must limit access. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.4.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "12.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-001",
+      "cis_id": "6.5.1",
+      "title": "Host SSH daemon, if enabled, must use FIPS 140-2/140-3 validated ciphers",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must use FIPS 140-2/140-3 validated ciphers. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.10"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-002",
+      "cis_id": "6.5.2",
+      "title": "Host SSH daemon, if enabled, must use FIPS 140-2/140-3 validated cryptographic modules",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must use FIPS 140-2/140-3 validated cryptographic modules. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.10"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-003",
+      "cis_id": "6.5.3",
+      "title": "Host SSH daemon, if enabled, must not allow use of gateway ports",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must not allow use of gateway ports. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.3 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-004",
+      "cis_id": "6.5.4",
+      "title": "Host SSH daemon, if enabled, must not allow host-based authentication",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must not allow host-based authentication. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.4 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-005",
+      "cis_id": "6.5.5",
+      "title": "Host SSH daemon, if enabled, must set a timeout count on idle sessions",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must set a timeout count on idle sessions. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-006",
+      "cis_id": "6.5.6",
+      "title": "Host SSH daemon, if enabled, must set a timeout interval on idle sessions",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must set a timeout interval on idle sessions. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.6 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-007",
+      "cis_id": "6.5.7",
+      "title": "Host SSH daemon, if enabled, must display the system login banner before granting access",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must display the system login banner before granting access. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.7 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-008",
+      "cis_id": "6.5.8",
+      "title": "Host SSH daemon, if enabled, must ignore .rhosts files",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must ignore .rhosts files. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.8 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-009",
+      "cis_id": "6.5.9",
+      "title": "Host SSH daemon, if enabled, must disable stream local forwarding",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must disable stream local forwarding. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.9 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-010",
+      "cis_id": "6.5.10",
+      "title": "Host SSH daemon, if enabled, must disable TCP forwarding",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must disable TCP forwarding. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.10 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-011",
+      "cis_id": "6.5.11",
+      "title": "Host SSH daemon, if enabled, must not permit tunnels",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must not permit tunnels. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-SSHD-012",
+      "cis_id": "6.5.12",
+      "title": "Host SSH daemon, if enabled, must not permit user environment settings",
+      "section": "Features",
+      "category": "SSH Daemon",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: host SSH daemon, if enabled, must not permit user environment settings. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 6.5.12 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-001",
+      "cis_id": "7.1",
+      "title": "Virtual machines must enable Secure Boot",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must enable Secure Boot. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-002",
+      "cis_id": "7.2",
+      "title": "Virtual machines must require encryption for vMotion",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must require encryption for vMotion. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.10"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-003",
+      "cis_id": "7.3",
+      "title": "Virtual machines must require encryption for Fault Tolerance",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must require encryption for Fault Tolerance. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.3 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "3.10"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-005",
+      "cis_id": "7.5",
+      "title": "Virtual machines must be configured to lock when the last console connection is closed",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must be configured to lock when the last console connection is closed. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.3",
+        "12.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-010",
+      "cis_id": "7.10",
+      "title": "Virtual machines must remove unnecessary audio devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must remove unnecessary audio devices. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.10 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-011",
+      "cis_id": "7.11",
+      "title": "Virtual machines must remove unnecessary AHCI devices",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must remove unnecessary AHCI devices. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-020",
+      "cis_id": "7.20",
+      "title": "Virtual machines must limit access through the \"dvfilter\" network API",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must limit access through the \"dvfilter\" network API. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.20 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.1"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-023",
+      "cis_id": "7.23",
+      "title": "Virtual machines must restrict sharing of memory pages with other VMs",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must restrict sharing of memory pages with other VMs. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.23 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-025",
+      "cis_id": "7.25",
+      "title": "Virtual machines must enable diagnostic logging",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must enable diagnostic logging. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.25 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.5"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-028",
+      "cis_id": "7.28",
+      "title": "Virtual machines must limit informational messages from the virtual machine to the VMX file",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines must limit informational messages from the virtual machine to the VMX file. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.28 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.3"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-VM-029",
+      "cis_id": "7.29",
+      "title": "Virtual machines should have virtual machine hardware version 19 or newer",
+      "section": "Virtual Machines",
+      "category": "Virtual Machine Configuration",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: virtual machines should have virtual machine hardware version 19 or newer. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 7.29 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-001",
+      "cis_id": "8.1",
+      "title": "VMware Tools must be a version that has not reached End of General Support status",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must be a version that has not reached End of General Support status. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.1 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "2.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-002",
+      "cis_id": "8.2",
+      "title": "VMware Tools must have all software updates installed",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must have all software updates installed. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.2 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "7.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-003",
+      "cis_id": "8.3",
+      "title": "VMware Tools should configure automatic upgrades as appropriate for the environment",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools should configure automatic upgrades as appropriate for the environment. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.3 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "7.4"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-004",
+      "cis_id": "8.4",
+      "title": "VMware Tools on deployed virtual machines must prevent being recustomized",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools on deployed virtual machines must prevent being recustomized. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.4 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-005",
+      "cis_id": "8.5",
+      "title": "VMware Tools must limit the automatic addition of features",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must limit the automatic addition of features. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.5 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-006",
+      "cis_id": "8.6",
+      "title": "VMware Tools must limit the automatic removal of features",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must limit the automatic removal of features. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.6 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.6"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-007",
+      "cis_id": "8.7",
+      "title": "VMware Tools must deactivate GlobalConf unless required",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must deactivate GlobalConf unless required. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.7 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-008",
+      "cis_id": "8.8",
+      "title": "VMware Tools must deactivate ContainerInfo unless required",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must deactivate ContainerInfo unless required. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.8 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-009",
+      "cis_id": "8.9",
+      "title": "VMware Tools must deactivate Appinfo information gathering unless required",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must deactivate Appinfo information gathering unless required. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.9 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-010",
+      "cis_id": "8.10",
+      "title": "VMware Tools must deactivate Guest Store Upgrade operations unless required",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must deactivate Guest Store Upgrade operations unless required. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.10 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-011",
+      "cis_id": "8.11",
+      "title": "VMware Tools must deactivate Service Discovery unless required",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must deactivate Service Discovery unless required. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.11 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-012",
+      "cis_id": "8.12",
+      "title": "VMware Tools must limit the use of MSI transforms when reconfiguring VMware Tools",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must limit the use of MSI transforms when reconfiguring VMware Tools. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.12 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-013",
+      "cis_id": "8.13",
+      "title": "VMware Tools must enable VMware Tools logging",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must enable VMware Tools logging. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.13 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.2"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-014",
+      "cis_id": "8.14",
+      "title": "VMware Tools must send VMware Tools logs to the system log service",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must send VMware Tools logs to the system log service. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.14 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "8.9"
+      ],
+      "nist_800_53": []
+    },
+    {
+      "id": "ESX8-TOOLS-015",
+      "cis_id": "8.15",
+      "title": "VMware Tools must deactivate Guest Operations unless required",
+      "section": "VMware Tools",
+      "category": "VMware Tools",
+      "profiles": [
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "severity": "Informational",
+      "guidance": "Manual review required: vMware Tools must deactivate Guest Operations unless required. This recommendation depends on evidence the tool cannot verify reliably from the host itself (management server, hardware, guest or organisational records); confirm it with the responsible administrator and record the result.",
+      "remediation": "Where the review finds a gap, apply the remediation for recommendation 8.15 of the CIS VMware ESXi 8.0 Benchmark v1.4.0 after assessing operational impact.",
+      "references": [
+        "https://github.com/vmware/vcf-security-and-compliance-guidelines"
+      ],
+      "cis_controls_v8": [
+        "4.8"
+      ],
+      "nist_800_53": []
+    }
+  ]
+}

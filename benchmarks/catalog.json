@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "generated_by": "build_benchmark_definition.py",
+  "benchmarks": [
+    {
+      "file_name": "CIS_Debian_Linux_13_1.1.0.json",
+      "sha256": "f3e96770d1d969a706e0b09c52bbbb7043bab39b929f8ab2d834330c429ece22",
+      "id": "debian-linux-13",
+      "framework": "CIS",
+      "name": "CIS Debian Linux 13 Benchmark",
+      "short_name": "Debian Linux 13",
+      "version": "1.1.0",
+      "published": "2026-08-26",
+      "source_document": "CIS_Debian_Linux_13_Benchmark_v1.1.0.pdf",
+      "platform": {
+        "os_id": "debian",
+        "version_ids": [
+          "13"
+        ],
+        "architectures": [
+          "x86_64"
+        ]
+      },
+      "profiles": [
+        "Level 1 - Server",
+        "Level 2 - Server",
+        "Level 1 - Workstation",
+        "Level 2 - Workstation"
+      ],
+      "automated_control_count": 333,
+      "manual_control_count": 17
+    },
+    {
+      "file_name": "CIS_VMware_ESXi_7.0_1.6.0.json",
+      "sha256": "6619a5a614cec839052c1d20cd31be345b9d4677e29611362c8db750f84fc8f6",
+      "id": "vmware-esxi-7.0",
+      "framework": "CIS",
+      "name": "CIS VMware ESXi 7.0 Benchmark",
+      "short_name": "VMware ESXi 7.0",
+      "version": "1.6.0",
+      "published": "2026-08-27",
+      "source_document": "CIS VMWare ESXi 7 Benchmark V1.6.0 PDF.pdf",
+      "platform": {
+        "os_id": "esxi",
+        "version_ids": [
+          "7"
+        ],
+        "architectures": [
+          "x86_64"
+        ]
+      },
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)",
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated_control_count": 61,
+      "manual_control_count": 29
+    },
+    {
+      "file_name": "CIS_VMware_ESXi_8.0_1.4.0.json",
+      "sha256": "67d9019fb598ad541d39365cba29e302e691cf2557cf96c1ee6ef1cd074dda72",
+      "id": "vmware-esxi-8.0",
+      "framework": "CIS",
+      "name": "CIS VMware ESXi 8.0 Benchmark",
+      "short_name": "VMware ESXi 8.0",
+      "version": "1.4.0",
+      "published": "2026-08-27",
+      "source_document": "CIS_VMware_ESXi_8.0_Benchmark_v1.4.0_PDF.pdf",
+      "platform": {
+        "os_id": "esxi",
+        "version_ids": [
+          "8"
+        ],
+        "architectures": [
+          "x86_64"
+        ]
+      },
+      "profiles": [
+        "Level 1 (L1) - Corporate/Enterprise Environment (general use)",
+        "Level 2 (L2) - High Security/Sensitive Data Environment (limited functionality)"
+      ],
+      "automated_control_count": 38,
+      "manual_control_count": 96
+    }
+  ]
+}

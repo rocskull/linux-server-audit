@@ -1,0 +1,31 @@
+{
+  "framework_name": "Linux Security Audit",
+  "version": "1.0.0",
+  "audit_mode": "ReadOnly",
+  "report_formats": [
+    "json",
+    "html",
+    "csv",
+    "xlsx",
+    "consolidated"
+  ],
+  "output_directory": "reports",
+  "benchmarks_directory": "benchmarks",
+  "client_name": null,
+  "profile": "auto",
+  "include_manual": false,
+  "command_timeout_seconds": 60,
+  "site_policy": {
+    "network_router": false,
+    "logging_method": "auto",
+    "approved_time_servers": [],
+    "sshd_match_contexts": [],
+    "esxi_native_vlan": 1,
+    "esxi_vgt_portgroups": [],
+    "esxi_excluded_vms": ["vCLS*"]
+  },
+  "filesystem_scan": {
+    "enabled": true,
+    "exclude_paths": []
+  }
+}

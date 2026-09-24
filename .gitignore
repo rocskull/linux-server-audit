@@ -1,0 +1,15 @@
+# CIS benchmark PDFs: the CIS terms of use forbid hosting them on any
+# non-CIS site. Keep them locally; the builder reads them from here.
+*.pdf
+
+# Assessment output holds host security findings.
+reports/
+*-assessment-*/
+*.log
+
+# Python and tool caches
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
